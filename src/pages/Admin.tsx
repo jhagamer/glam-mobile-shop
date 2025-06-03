@@ -38,14 +38,15 @@ interface Order {
   total_amount: number;
   phone_number: string;
   created_at: string;
-  profiles?: { email: string };
+  user_id: string;
+  user_email?: string;
 }
 
 interface User {
   id: string;
   email: string;
   created_at: string;
-  user_roles: { role: string }[];
+  roles: string[];
 }
 
 const Admin = () => {
@@ -113,16 +114,31 @@ const Admin = () => {
 
   const fetchOrders = async () => {
     try {
-      const { data, error } = await supabase
+      // First get orders
+      const { data: ordersData, error: ordersError } = await supabase
         .from('orders')
-        .select(`
-          *,
-          profiles (email)
-        `)
+        .select('*')
         .order('created_at', { ascending: false });
 
-      if (error) throw error;
-      setOrders(data || []);
+      if (ordersError) throw ordersError;
+
+      // Then get user emails for each order
+      const ordersWithEmails = await Promise.all(
+        (ordersData || []).map(async (order) => {
+          const { data: profileData } = await supabase
+            .from('profiles')
+            .select('email')
+            .eq('id', order.user_id)
+            .single();
+
+          return {
+            ...order,
+            user_email: profileData?.email || 'Unknown'
+          };
+        })
+      );
+
+      setOrders(ordersWithEmails);
     } catch (error) {
       console.error('Error fetching orders:', error);
     }
@@ -130,16 +146,32 @@ const Admin = () => {
 
   const fetchUsers = async () => {
     try {
-      const { data, error } = await supabase
+      // Get all profiles
+      const { data: profilesData, error: profilesError } = await supabase
         .from('profiles')
-        .select(`
-          *,
-          user_roles (role)
-        `)
+        .select('*')
         .order('created_at', { ascending: false });
 
-      if (error) throw error;
-      setUsers(data || []);
+      if (profilesError) throw profilesError;
+
+      // Get roles for each user
+      const usersWithRoles = await Promise.all(
+        (profilesData || []).map(async (profile) => {
+          const { data: rolesData } = await supabase
+            .from('user_roles')
+            .select('role')
+            .eq('user_id', profile.id);
+
+          return {
+            id: profile.id,
+            email: profile.email || 'No email',
+            created_at: profile.created_at,
+            roles: rolesData?.map(r => r.role) || []
+          };
+        })
+      );
+
+      setUsers(usersWithRoles);
     } catch (error) {
       console.error('Error fetching users:', error);
     }
@@ -406,7 +438,7 @@ const Admin = () => {
                     <div className="flex justify-between items-start">
                       <div>
                         <h3 className="font-semibold">Order #{order.id.slice(-8)}</h3>
-                        <p className="text-gray-600">{order.profiles?.email}</p>
+                        <p className="text-gray-600">{order.user_email}</p>
                         <p className="text-sm text-gray-500">Phone: {order.phone_number}</p>
                         <p className="font-medium text-rose-600">{formatPrice(order.total_amount)}</p>
                       </div>
@@ -447,10 +479,10 @@ const Admin = () => {
                         </p>
                       </div>
                       <div className="flex items-center space-x-2">
-                        <Badge variant={user.user_roles.some(r => r.role === 'admin') ? "default" : "secondary"}>
-                          {user.user_roles.some(r => r.role === 'admin') ? 'Admin' : 'Consumer'}
+                        <Badge variant={user.roles.includes('admin') ? "default" : "secondary"}>
+                          {user.roles.includes('admin') ? 'Admin' : 'Consumer'}
                         </Badge>
-                        {!user.user_roles.some(r => r.role === 'admin') && (
+                        {!user.roles.includes('admin') && (
                           <Button
                             size="sm"
                             onClick={() => promoteToAdmin(user.id)}
