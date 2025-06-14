@@ -32,74 +32,40 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const fetchUserRole = async (userId: string) => {
     try {
-      console.log('🔍 Fetching user role for:', userId);
-      console.log('🔍 User email:', user?.email);
+      console.log('Fetching user role for:', userId);
       
-      // First, let's check if the user exists in profiles table
-      const { data: profileData, error: profileError } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', userId);
-
-      console.log('🔍 Profile data:', profileData);
-      console.log('🔍 Profile error:', profileError);
-
-      // Then check user_roles table
       const { data, error } = await supabase
         .from('user_roles')
         .select('role')
         .eq('user_id', userId);
 
-      console.log('🔍 Raw user_roles query result:', { data, error });
-
-      // Also check all user_roles to see what's in there
-      const { data: allRoles, error: allRolesError } = await supabase
-        .from('user_roles')
-        .select('*');
-
-      console.log('🔍 ALL user_roles in database:', allRoles);
-      console.log('🔍 All roles error:', allRolesError);
-
-      // Check profiles table for our specific email
-      const { data: emailProfile, error: emailError } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('email', 'shopcrimsonhouse@gmail.com');
-
-      console.log('🔍 Profile with target email:', emailProfile);
-      console.log('🔍 Email profile error:', emailError);
-
       if (error) {
-        console.error('❌ Error fetching user role:', error);
+        console.error('Error fetching user role:', error);
         return 'consumer';
       }
 
       if (!data || data.length === 0) {
-        console.log('⚠️ No roles found for user, defaulting to consumer');
+        console.log('No roles found for user, defaulting to consumer');
         return 'consumer';
       }
 
-      // Check if user has admin role
       const hasAdminRole = data.some(roleData => roleData.role === 'admin');
-      console.log('🔍 User roles found:', data.map(d => d.role));
-      console.log('🔍 Has admin role?', hasAdminRole);
-
       const finalRole = hasAdminRole ? 'admin' : 'consumer';
-      console.log('🎯 Final role determined:', finalRole);
+      console.log('User role determined:', finalRole);
       
       return finalRole;
     } catch (error) {
-      console.error('💥 Error in fetchUserRole:', error);
+      console.error('Error in fetchUserRole:', error);
       return 'consumer';
     }
   };
 
   const refreshUserRole = async () => {
     if (user) {
-      console.log('🔄 Refreshing user role for:', user.email);
+      console.log('Refreshing user role for:', user.email);
       const role = await fetchUserRole(user.id);
       setUserRole(role);
-      console.log('✅ Role refreshed to:', role);
+      console.log('Role refreshed to:', role);
     }
   };
 
@@ -107,27 +73,24 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        console.log('🔐 Auth state changed:', event, session?.user?.email);
+        console.log('Auth state changed:', event, session?.user?.email);
         setSession(session);
         setUser(session?.user ?? null);
 
         if (session?.user) {
-          // Fetch user role asynchronously
-          setTimeout(async () => {
-            const role = await fetchUserRole(session.user.id);
-            setUserRole(role);
-            setLoading(false);
-          }, 0);
+          // Fetch user role
+          const role = await fetchUserRole(session.user.id);
+          setUserRole(role);
         } else {
           setUserRole(null);
-          setLoading(false);
         }
+        setLoading(false);
       }
     );
 
     // Get initial session
     supabase.auth.getSession().then(({ data: { session } }) => {
-      console.log('🏁 Initial session check:', session?.user?.email);
+      console.log('Initial session check:', session?.user?.email);
       setSession(session);
       setUser(session?.user ?? null);
       
@@ -146,6 +109,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const signInWithGoogle = async () => {
     try {
+      setLoading(true);
       const redirectUrl = `${window.location.origin}/`;
       
       const { error } = await supabase.auth.signInWithOAuth({
@@ -156,11 +120,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       });
 
       if (error) {
+        console.error('Google sign in error:', error);
         toast({
           title: "Authentication Error",
           description: error.message,
           variant: "destructive"
         });
+        setLoading(false);
       }
     } catch (error) {
       console.error('Error signing in:', error);
@@ -169,6 +135,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         description: "Failed to sign in with Google",
         variant: "destructive"
       });
+      setLoading(false);
     }
   };
 
