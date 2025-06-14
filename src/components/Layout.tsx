@@ -12,7 +12,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { ShoppingCart, User, LogOut, Settings, Package, History } from 'lucide-react';
+import { ShoppingCart, User, LogOut, Settings, Package, History, RefreshCw } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 
 interface LayoutProps {
@@ -21,7 +21,7 @@ interface LayoutProps {
 }
 
 const Layout: React.FC<LayoutProps> = ({ children, cartItemCount = 0 }) => {
-  const { user, userRole, signOut } = useAuth();
+  const { user, userRole, signOut, refreshUserRole } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -45,6 +45,12 @@ const Layout: React.FC<LayoutProps> = ({ children, cartItemCount = 0 }) => {
     navigate('/');
   };
 
+  const handleRefreshRole = async () => {
+    console.log('Manually refreshing user role...');
+    await refreshUserRole();
+    console.log('User role after refresh:', userRole);
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-rose-50 via-white to-purple-50">
       {/* Header */}
@@ -66,6 +72,16 @@ const Layout: React.FC<LayoutProps> = ({ children, cartItemCount = 0 }) => {
 
             {/* Navigation */}
             <div className="flex items-center space-x-4">
+              {/* Temporary refresh button for debugging */}
+              <Button
+                variant="ghost"
+                onClick={handleRefreshRole}
+                className="text-gray-600 hover:text-gray-700"
+                size="sm"
+              >
+                <RefreshCw className="h-4 w-4" />
+              </Button>
+
               {userRole === 'admin' && (
                 <div className="flex items-center space-x-2">
                   <Button
@@ -122,6 +138,9 @@ const Layout: React.FC<LayoutProps> = ({ children, cartItemCount = 0 }) => {
                       </p>
                       <p className="text-xs leading-none text-muted-foreground">
                         {user?.email}
+                      </p>
+                      <p className="text-xs leading-none text-blue-600">
+                        Role: {userRole || 'loading...'}
                       </p>
                     </div>
                   </DropdownMenuLabel>
