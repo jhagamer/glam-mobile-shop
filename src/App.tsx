@@ -9,6 +9,8 @@ import Home from "./pages/Home";
 import Auth from "./pages/Auth";
 import Cart from "./pages/Cart";
 import Admin from "./pages/Admin";
+import OrderHistory from "./pages/OrderHistory";
+import ProductManagement from "./pages/ProductManagement";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -67,9 +69,19 @@ const AppRoutes = () => {
           <Cart />
         </ProtectedRoute>
       } />
+      <Route path="/orders" element={
+        <ProtectedRoute>
+          <OrderHistory />
+        </ProtectedRoute>
+      } />
       <Route path="/admin" element={
         <ProtectedRoute>
           <Admin />
+        </ProtectedRoute>
+      } />
+      <Route path="/admin/products" element={
+        <ProtectedRoute>
+          <ProductManagement />
         </ProtectedRoute>
       } />
       <Route path="*" element={<NotFound />} />

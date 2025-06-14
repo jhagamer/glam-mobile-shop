@@ -3,10 +3,9 @@ import React from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import Layout from '@/components/Layout';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Users, Package, ShoppingCart, Crown } from 'lucide-react';
+import { Users, ShoppingCart, Crown } from 'lucide-react';
 import { Navigate } from 'react-router-dom';
 import { useAdminData } from '@/hooks/useAdminData';
-import { ProductsTab } from '@/components/admin/ProductsTab';
 import { OrdersTab } from '@/components/admin/OrdersTab';
 import { UsersTab } from '@/components/admin/UsersTab';
 import { CategoriesTab } from '@/components/admin/CategoriesTab';
@@ -14,11 +13,9 @@ import { CategoriesTab } from '@/components/admin/CategoriesTab';
 const Admin = () => {
   const { user, userRole, loading } = useAuth();
   const {
-    products,
     categories,
     orders,
     users,
-    fetchProducts,
     fetchCategories,
     updateOrderStatus,
     promoteToAdmin
@@ -49,15 +46,11 @@ const Admin = () => {
           </h1>
         </div>
 
-        <Tabs defaultValue="products" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-4">
-            <TabsTrigger value="products" className="flex items-center space-x-2">
-              <Package className="h-4 w-4" />
-              <span>Products</span>
-            </TabsTrigger>
+        <Tabs defaultValue="orders" className="space-y-6">
+          <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="orders" className="flex items-center space-x-2">
               <ShoppingCart className="h-4 w-4" />
-              <span>Orders</span>
+              <span>Incoming Orders</span>
             </TabsTrigger>
             <TabsTrigger value="users" className="flex items-center space-x-2">
               <Users className="h-4 w-4" />
@@ -65,14 +58,6 @@ const Admin = () => {
             </TabsTrigger>
             <TabsTrigger value="categories">Categories</TabsTrigger>
           </TabsList>
-
-          <TabsContent value="products">
-            <ProductsTab
-              products={products}
-              categories={categories}
-              onRefreshProducts={fetchProducts}
-            />
-          </TabsContent>
 
           <TabsContent value="orders">
             <OrdersTab
