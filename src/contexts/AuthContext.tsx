@@ -37,6 +37,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         console.error('Error checking admin slot:', error);
         return false;
       }
+      console.log('Admin slot check result:', data);
       return data;
     } catch (error) {
       console.error('Error in checkAdminSlotAvailable:', error);
@@ -52,6 +53,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         .from('user_roles')
         .select('role')
         .eq('user_id', userId);
+
+      console.log('Role query result:', { data, error });
 
       if (error) {
         console.error('Error fetching user role:', error);
@@ -76,25 +79,31 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const assignAdminRoleToGitHubUser = async (userId: string) => {
     try {
-      console.log('Assigning admin role to GitHub user:', userId);
+      console.log('Starting admin role assignment for GitHub user:', userId);
       
-      // First, delete any existing consumer role
-      await supabase
+      // First, delete any existing roles for this user
+      const { error: deleteError } = await supabase
         .from('user_roles')
         .delete()
         .eq('user_id', userId);
 
+      if (deleteError) {
+        console.error('Error deleting existing roles:', deleteError);
+      } else {
+        console.log('Existing roles deleted successfully');
+      }
+
       // Then assign admin role
-      const { error } = await supabase
+      const { error: insertError } = await supabase
         .from('user_roles')
         .insert([{ user_id: userId, role: 'admin' }]);
       
-      if (error) {
-        console.error('Error assigning admin role:', error);
-        throw error;
+      if (insertError) {
+        console.error('Error inserting admin role:', insertError);
+        throw insertError;
       }
       
-      console.log('Admin role assigned successfully');
+      console.log('Admin role assigned successfully to user:', userId);
       return true;
     } catch (error) {
       console.error('Database error assigning admin role:', error);
@@ -112,60 +121,59 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   useEffect(() => {
+    console.log('Setting up auth state listener...');
+    
     // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        console.log('Auth state changed:', event, session?.user?.email);
+        console.log('=== AUTH STATE CHANGE ===');
+        console.log('Event:', event);
+        console.log('Session user email:', session?.user?.email);
         console.log('Provider:', session?.user?.app_metadata?.provider);
+        console.log('User ID:', session?.user?.id);
         
         setSession(session);
         setUser(session?.user ?? null);
 
         if (session?.user) {
           // Handle GitHub signin specifically
-          if (event === 'SIGNED_IN' && session.user.app_metadata.provider === 'github') {
-            console.log('GitHub user signed in, checking admin slot...');
+          if (session.user.app_metadata.provider === 'github') {
+            console.log('=== GITHUB USER DETECTED ===');
             
-            const isAdminSlotAvailable = await checkAdminSlotAvailable();
-            console.log('Admin slot available:', isAdminSlotAvailable);
-            
-            if (!isAdminSlotAvailable) {
-              // Admin slot is taken, sign out the user
-              console.log('Admin slot taken, signing out user');
-              await supabase.auth.signOut();
-              toast({
-                title: "Access Denied",
-                description: "GitHub login is restricted to admin users only. The admin slot is currently occupied.",
-                variant: "destructive"
-              });
-              return;
-            }
-            
+            // For GitHub users, always try to assign admin role
             try {
-              // Assign admin role to GitHub user
               await assignAdminRoleToGitHubUser(session.user.id);
               setUserRole('admin');
-              toast({
-                title: "Welcome Admin",
-                description: "You have been signed in with admin privileges.",
-                variant: "default"
-              });
+              console.log('GitHub user assigned admin role successfully');
+              
+              if (event === 'SIGNED_IN') {
+                toast({
+                  title: "Welcome Admin",
+                  description: "You have been signed in with admin privileges.",
+                  variant: "default"
+                });
+              }
             } catch (error) {
-              console.error('Failed to assign admin role:', error);
-              await supabase.auth.signOut();
+              console.error('Failed to assign admin role to GitHub user:', error);
+              // Don't sign out, just show error and use existing role
               toast({
-                title: "Error",
-                description: "Failed to assign admin privileges. Please contact support.",
+                title: "Role Assignment Warning",
+                description: "Could not assign admin role. Please contact support if this persists.",
                 variant: "destructive"
               });
-              return;
+              
+              // Fallback to fetching existing role
+              const role = await fetchUserRole(session.user.id);
+              setUserRole(role);
             }
           } else {
-            // For non-GitHub users or existing sessions, fetch normal role
+            // For non-GitHub users, fetch normal role
+            console.log('=== NON-GITHUB USER ===');
             const role = await fetchUserRole(session.user.id);
             setUserRole(role);
           }
         } else {
+          console.log('=== NO USER SESSION ===');
           setUserRole(null);
         }
         setLoading(false);
@@ -173,22 +181,43 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     );
 
     // Get initial session
+    console.log('Checking for initial session...');
     supabase.auth.getSession().then(({ data: { session } }) => {
-      console.log('Initial session check:', session?.user?.email);
+      console.log('=== INITIAL SESSION CHECK ===');
+      console.log('Initial session user:', session?.user?.email);
+      console.log('Initial session provider:', session?.user?.app_metadata?.provider);
+      
       setSession(session);
       setUser(session?.user ?? null);
       
       if (session?.user) {
-        fetchUserRole(session.user.id).then((role) => {
-          setUserRole(role);
-          setLoading(false);
-        });
+        if (session.user.app_metadata.provider === 'github') {
+          console.log('Initial session: GitHub user detected');
+          assignAdminRoleToGitHubUser(session.user.id).then(() => {
+            setUserRole('admin');
+            setLoading(false);
+          }).catch((error) => {
+            console.error('Error in initial GitHub role assignment:', error);
+            fetchUserRole(session.user.id).then((role) => {
+              setUserRole(role);
+              setLoading(false);
+            });
+          });
+        } else {
+          fetchUserRole(session.user.id).then((role) => {
+            setUserRole(role);
+            setLoading(false);
+          });
+        }
       } else {
         setLoading(false);
       }
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      console.log('Cleaning up auth subscription');
+      subscription.unsubscribe();
+    };
   }, []);
 
   const signInWithGoogle = async () => {
@@ -226,21 +255,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const signInWithGitHub = async () => {
     try {
       setLoading(true);
+      console.log('Starting GitHub sign in...');
       
-      // Check if admin slot is available before attempting login
-      const isAdminSlotAvailable = await checkAdminSlotAvailable();
-      
-      if (!isAdminSlotAvailable) {
-        toast({
-          title: "Access Denied",
-          description: "GitHub login is restricted to admin users only. The admin slot is currently occupied.",
-          variant: "destructive"
-        });
-        setLoading(false);
-        return;
-      }
-
       const redirectUrl = `${window.location.origin}/`;
+      console.log('Redirect URL:', redirectUrl);
       
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'github',
@@ -257,6 +275,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           variant: "destructive"
         });
         setLoading(false);
+      } else {
+        console.log('GitHub OAuth initiated successfully');
       }
     } catch (error) {
       console.error('Error signing in with GitHub:', error);
