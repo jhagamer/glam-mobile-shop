@@ -11,6 +11,7 @@ interface AuthContextType {
   loading: boolean;
   signInWithGoogle: () => Promise<void>;
   signOut: () => Promise<void>;
+  refreshUserRole: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -31,6 +32,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const fetchUserRole = async (userId: string) => {
     try {
+      console.log('Fetching user role for:', userId);
       const { data, error } = await supabase
         .from('user_roles')
         .select('role')
@@ -39,13 +41,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       if (error) {
         console.error('Error fetching user role:', error);
-        return null;
+        // If no role found, default to consumer
+        return 'consumer';
       }
 
+      console.log('User role fetched:', data?.role);
       return data?.role as 'admin' | 'consumer' | null;
     } catch (error) {
       console.error('Error in fetchUserRole:', error);
-      return null;
+      return 'consumer';
+    }
+  };
+
+  const refreshUserRole = async () => {
+    if (user) {
+      const role = await fetchUserRole(user.id);
+      setUserRole(role);
     }
   };
 
@@ -149,6 +160,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     loading,
     signInWithGoogle,
     signOut,
+    refreshUserRole,
   };
 
   return (
