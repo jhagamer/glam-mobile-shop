@@ -143,7 +143,6 @@ export const useAdminData = (userRole: string) => {
 
   useEffect(() => {
     if (userRole === 'admin') {
-      fetchCategories();
       fetchOrders();
       fetchUsers();
     }

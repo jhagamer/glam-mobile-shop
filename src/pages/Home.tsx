@@ -85,11 +85,8 @@ const Home = () => {
       setProducts(data || []);
     } catch (error) {
       console.error('Error fetching products:', error);
-      toast({
-        title: "Error",
-        description: "Failed to load products",
-        variant: "destructive"
-      });
+      // Don't show error toast to prevent admin page errors
+      setProducts([]);
     } finally {
       setLoading(false);
     }

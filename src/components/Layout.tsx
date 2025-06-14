@@ -4,7 +4,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { ShoppingCart, User, LogOut, Settings } from 'lucide-react';
+import { ShoppingCart, User, LogOut, Settings, Package, History } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 
 interface LayoutProps {
@@ -21,12 +21,16 @@ const Layout: React.FC<LayoutProps> = ({ children, cartItemCount = 0 }) => {
     navigate('/cart');
   };
 
-  const handleProfileClick = () => {
-    navigate('/profile');
+  const handleOrderHistoryClick = () => {
+    navigate('/orders');
   };
 
   const handleAdminClick = () => {
     navigate('/admin');
+  };
+
+  const handleProductManagementClick = () => {
+    navigate('/admin/products');
   };
 
   const handleLogoClick = () => {
@@ -55,13 +59,34 @@ const Layout: React.FC<LayoutProps> = ({ children, cartItemCount = 0 }) => {
             {/* Navigation */}
             <div className="flex items-center space-x-4">
               {userRole === 'admin' && (
+                <div className="flex items-center space-x-2">
+                  <Button
+                    variant="ghost"
+                    onClick={handleAdminClick}
+                    className="text-rose-600 hover:text-rose-700 hover:bg-rose-50"
+                  >
+                    <Settings className="h-4 w-4 mr-2" />
+                    Orders
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    onClick={handleProductManagementClick}
+                    className="text-rose-600 hover:text-rose-700 hover:bg-rose-50"
+                  >
+                    <Package className="h-4 w-4 mr-2" />
+                    Products
+                  </Button>
+                </div>
+              )}
+
+              {userRole === 'consumer' && (
                 <Button
                   variant="ghost"
-                  onClick={handleAdminClick}
+                  onClick={handleOrderHistoryClick}
                   className="text-rose-600 hover:text-rose-700 hover:bg-rose-50"
                 >
-                  <Settings className="h-4 w-4 mr-2" />
-                  Admin Panel
+                  <History className="h-4 w-4 mr-2" />
+                  Order History
                 </Button>
               )}
 
