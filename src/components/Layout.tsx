@@ -4,6 +4,14 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { ShoppingCart, User, LogOut, Settings, Package, History } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 
@@ -79,17 +87,6 @@ const Layout: React.FC<LayoutProps> = ({ children, cartItemCount = 0 }) => {
                 </div>
               )}
 
-              {userRole === 'consumer' && (
-                <Button
-                  variant="ghost"
-                  onClick={handleOrderHistoryClick}
-                  className="text-rose-600 hover:text-rose-700 hover:bg-rose-50"
-                >
-                  <History className="h-4 w-4 mr-2" />
-                  Order History
-                </Button>
-              )}
-
               <Button
                 variant="ghost"
                 onClick={handleCartClick}
@@ -105,23 +102,61 @@ const Layout: React.FC<LayoutProps> = ({ children, cartItemCount = 0 }) => {
                 )}
               </Button>
 
-              <div className="flex items-center space-x-2">
-                <Avatar className="h-8 w-8">
-                  <AvatarImage src={user?.user_metadata?.avatar_url} />
-                  <AvatarFallback className="bg-gradient-to-br from-rose-400 to-purple-600 text-white">
-                    {user?.email?.charAt(0).toUpperCase() || 'U'}
-                  </AvatarFallback>
-                </Avatar>
-                
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={signOut}
-                  className="text-gray-600 hover:text-gray-700 hover:bg-gray-50"
-                >
-                  <LogOut className="h-4 w-4" />
-                </Button>
-              </div>
+              {/* Profile Dropdown */}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" className="relative h-8 w-8 rounded-full">
+                    <Avatar className="h-8 w-8">
+                      <AvatarImage src={user?.user_metadata?.avatar_url} />
+                      <AvatarFallback className="bg-gradient-to-br from-rose-400 to-purple-600 text-white">
+                        {user?.email?.charAt(0).toUpperCase() || 'U'}
+                      </AvatarFallback>
+                    </Avatar>
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent className="w-56 bg-white border border-gray-200 shadow-lg" align="end" forceMount>
+                  <DropdownMenuLabel className="font-normal">
+                    <div className="flex flex-col space-y-1">
+                      <p className="text-sm font-medium leading-none">
+                        {user?.email?.split('@')[0] || 'User'}
+                      </p>
+                      <p className="text-xs leading-none text-muted-foreground">
+                        {user?.email}
+                      </p>
+                    </div>
+                  </DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  
+                  {userRole === 'consumer' && (
+                    <>
+                      <DropdownMenuItem onClick={handleOrderHistoryClick}>
+                        <History className="mr-2 h-4 w-4" />
+                        <span>Order History</span>
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator />
+                    </>
+                  )}
+                  
+                  {userRole === 'admin' && (
+                    <>
+                      <DropdownMenuItem onClick={handleAdminClick}>
+                        <Settings className="mr-2 h-4 w-4" />
+                        <span>Manage Orders</span>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={handleProductManagementClick}>
+                        <Package className="mr-2 h-4 w-4" />
+                        <span>Manage Products</span>
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator />
+                    </>
+                  )}
+                  
+                  <DropdownMenuItem onClick={signOut}>
+                    <LogOut className="mr-2 h-4 w-4" />
+                    <span>Log out</span>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
           </div>
         </div>
