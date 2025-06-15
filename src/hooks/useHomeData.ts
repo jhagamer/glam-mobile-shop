@@ -210,6 +210,7 @@ export const useHomeData = () => {
     categoriesLoading,
     categoriesError,
     fetchCategories,
-    handleAddToCart
+    handleAddToCart,
+    fetchProducts
   };
 };
