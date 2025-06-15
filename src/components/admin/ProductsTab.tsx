@@ -6,9 +6,10 @@ import { Badge } from '@/components/ui/badge';
 import { Edit, Trash2, Plus, Loader2 } from 'lucide-react';
 import { Product, Category } from '@/types/admin';
 import { ProductDialog } from './ProductDialog';
+import { ConfirmationDialog } from '@/components/ui/confirmation-dialog';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
-import { formatPrice } from '@/utils/admin';
+import { formatPrice } from '@/utils/currency';
 
 interface ProductsTabProps {
   products: Product[];
@@ -25,13 +26,12 @@ export const ProductsTab: React.FC<ProductsTabProps> = ({
 }) => {
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [isProductDialogOpen, setIsProductDialogOpen] = useState(false);
+  const [deleteProductId, setDeleteProductId] = useState<string | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const handleDeleteProduct = async (productId: string) => {
-    if (!confirm('Are you sure you want to delete this product? This action cannot be undone.')) {
-      return;
-    }
-
     try {
+      setIsDeleting(true);
       const { error } = await supabase
         .from('products')
         .delete()
@@ -47,6 +47,9 @@ export const ProductsTab: React.FC<ProductsTabProps> = ({
         description: "Failed to delete product",
         variant: "destructive"
       });
+    } finally {
+      setIsDeleting(false);
+      setDeleteProductId(null);
     }
   };
 
@@ -81,7 +84,9 @@ export const ProductsTab: React.FC<ProductsTabProps> = ({
       {products.length === 0 ? (
         <Card>
           <CardContent className="p-8 text-center">
-            <p className="text-gray-500 mb-4">No products found</p>
+            <div className="text-6xl mb-4">📦</div>
+            <h3 className="text-xl font-semibold text-gray-700 mb-2">No products found</h3>
+            <p className="text-gray-500 mb-4">Start building your inventory by adding your first product</p>
             <Button onClick={() => openProductDialog()}>
               <Plus className="h-4 w-4 mr-2" />
               Add Your First Product
@@ -91,7 +96,7 @@ export const ProductsTab: React.FC<ProductsTabProps> = ({
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {products.map((product) => (
-            <Card key={product.id}>
+            <Card key={product.id} className="overflow-hidden">
               <CardContent className="p-4">
                 <div className="aspect-square bg-gradient-to-br from-rose-100 to-purple-100 rounded-lg mb-4 flex items-center justify-center overflow-hidden">
                   {product.image_url ? (
@@ -113,11 +118,17 @@ export const ProductsTab: React.FC<ProductsTabProps> = ({
                     <span className="text-4xl">📦</span>
                   )}
                 </div>
-                <h3 className="font-semibold mb-2">{product.name}</h3>
-                <p className="text-sm text-gray-600 mb-2 line-clamp-2">{product.description}</p>
-                <div className="space-y-2 mb-3">
+                
+                <h3 className="font-semibold mb-2 line-clamp-1" title={product.name}>
+                  {product.name}
+                </h3>
+                <p className="text-sm text-gray-600 mb-3 line-clamp-2" title={product.description}>
+                  {product.description}
+                </p>
+                
+                <div className="space-y-2 mb-4">
                   <div className="flex justify-between items-center">
-                    <span className="font-medium text-rose-600">NPR {formatPrice(product.price)}</span>
+                    <span className="font-medium text-rose-600">{formatPrice(product.price)}</span>
                     <Badge variant={product.is_active ? "default" : "secondary"}>
                       {product.is_active ? "Active" : "Inactive"}
                     </Badge>
@@ -135,6 +146,7 @@ export const ProductsTab: React.FC<ProductsTabProps> = ({
                     </div>
                   )}
                 </div>
+                
                 <div className="flex space-x-2">
                   <Button
                     variant="outline"
@@ -142,13 +154,15 @@ export const ProductsTab: React.FC<ProductsTabProps> = ({
                     onClick={() => openProductDialog(product)}
                     className="flex-1"
                   >
-                    <Edit className="h-4 w-4" />
+                    <Edit className="h-4 w-4 mr-1" />
+                    Edit
                   </Button>
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => handleDeleteProduct(product.id)}
-                    className="text-red-600 hover:text-red-700"
+                    onClick={() => setDeleteProductId(product.id)}
+                    className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                    disabled={isDeleting}
                   >
                     <Trash2 className="h-4 w-4" />
                   </Button>
@@ -165,6 +179,17 @@ export const ProductsTab: React.FC<ProductsTabProps> = ({
         product={selectedProduct}
         categories={categories}
         onSuccess={onRefreshProducts}
+      />
+
+      <ConfirmationDialog
+        isOpen={deleteProductId !== null}
+        onClose={() => setDeleteProductId(null)}
+        onConfirm={() => deleteProductId && handleDeleteProduct(deleteProductId)}
+        title="Delete Product"
+        description="Are you sure you want to delete this product? This action cannot be undone and will remove the product from all customer carts."
+        confirmText="Delete Product"
+        cancelText="Cancel"
+        variant="destructive"
       />
     </div>
   );

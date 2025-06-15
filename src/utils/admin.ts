@@ -1,11 +1,8 @@
 
+import { formatPriceSimple } from '@/utils/currency';
+
 export const formatPrice = (price: number) => {
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'NPR',
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2
-  }).format(price);
+  return formatPriceSimple(price);
 };
 
 export const getStatusColor = (status: string) => {

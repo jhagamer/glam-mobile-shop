@@ -4,6 +4,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ShoppingCart, Heart } from 'lucide-react';
+import { formatPrice } from '@/utils/currency';
 
 interface Product {
   id: string;
@@ -11,6 +12,7 @@ interface Product {
   description: string;
   price: number;
   image_url: string;
+  stock?: number;
 }
 
 interface ProductCardProps {
@@ -19,12 +21,8 @@ interface ProductCardProps {
 }
 
 const ProductCard: React.FC<ProductCardProps> = ({ product, onAddToCart }) => {
-  const formatPrice = (price: number) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD'
-    }).format(price);
-  };
+  const isOutOfStock = product.stock !== undefined && product.stock <= 0;
+  const isLowStock = product.stock !== undefined && product.stock > 0 && product.stock <= 5;
 
   return (
     <Card className="group overflow-hidden border-0 shadow-lg hover:shadow-2xl transition-all duration-300 transform hover:scale-105 bg-white/80 backdrop-blur-sm">
@@ -40,6 +38,19 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onAddToCart }) => {
             <div className="text-6xl">💄</div>
           )}
         </div>
+        
+        {/* Stock status badge */}
+        {isOutOfStock && (
+          <div className="absolute top-2 left-2">
+            <Badge variant="destructive">Out of Stock</Badge>
+          </div>
+        )}
+        {isLowStock && (
+          <div className="absolute top-2 left-2">
+            <Badge className="bg-yellow-500 hover:bg-yellow-600">Low Stock</Badge>
+          </div>
+        )}
+        
         <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
           <Button
             variant="ghost"
@@ -69,12 +80,20 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onAddToCart }) => {
           <Button
             onClick={onAddToCart}
             size="sm"
-            className="bg-gradient-to-r from-rose-500 to-purple-600 hover:from-rose-600 hover:to-purple-700 text-white border-0 shadow-md hover:shadow-lg transition-all duration-300"
+            disabled={isOutOfStock}
+            className="bg-gradient-to-r from-rose-500 to-purple-600 hover:from-rose-600 hover:to-purple-700 text-white border-0 shadow-md hover:shadow-lg transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <ShoppingCart className="h-4 w-4 mr-1" />
-            Add
+            {isOutOfStock ? 'Out of Stock' : 'Add'}
           </Button>
         </div>
+        
+        {/* Stock count for available items */}
+        {product.stock !== undefined && product.stock > 0 && (
+          <div className="text-xs text-gray-500 text-center">
+            {product.stock} in stock
+          </div>
+        )}
       </CardContent>
     </Card>
   );

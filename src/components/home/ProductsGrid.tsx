@@ -1,7 +1,8 @@
 
 import React from 'react';
 import ProductCard from '@/components/ProductCard';
-import { Loader2 } from 'lucide-react';
+import { ProductCardSkeleton } from '@/components/ui/loading-skeleton';
+import { ErrorFallback } from '@/components/ui/error-boundary';
 
 interface Product {
   id: string;
@@ -19,6 +20,8 @@ interface ProductsGridProps {
   searchQuery: string;
   selectedCategory: string;
   onAddToCart: (productId: string) => void;
+  error?: string;
+  onRetry?: () => void;
 }
 
 const ProductsGrid: React.FC<ProductsGridProps> = ({
@@ -26,12 +29,20 @@ const ProductsGrid: React.FC<ProductsGridProps> = ({
   loading,
   searchQuery,
   selectedCategory,
-  onAddToCart
+  onAddToCart,
+  error,
+  onRetry
 }) => {
+  if (error) {
+    return <ErrorFallback error={error} onRetry={onRetry} />;
+  }
+
   if (loading) {
     return (
-      <div className="flex justify-center items-center py-12">
-        <Loader2 className="h-8 w-8 animate-spin text-rose-500" />
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+        {Array.from({ length: 8 }).map((_, index) => (
+          <ProductCardSkeleton key={index} />
+        ))}
       </div>
     );
   }
@@ -39,10 +50,12 @@ const ProductsGrid: React.FC<ProductsGridProps> = ({
   if (products.length === 0) {
     return (
       <div className="text-center py-12">
+        <div className="text-6xl mb-4">🔍</div>
+        <h3 className="text-xl font-semibold text-gray-700 mb-2">No products found</h3>
         <p className="text-gray-500">
           {searchQuery || selectedCategory !== 'all' 
-            ? 'No products found for your search criteria' 
-            : 'No products available'
+            ? 'Try adjusting your search criteria or browse different categories' 
+            : 'No products are currently available'
           }
         </p>
       </div>

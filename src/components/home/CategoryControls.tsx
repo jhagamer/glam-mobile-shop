@@ -1,7 +1,8 @@
 
 import React from 'react';
 import CategoryTabs from '@/components/CategoryTabs';
-import { Loader2 } from 'lucide-react';
+import { CategoryTabsSkeleton } from '@/components/ui/loading-skeleton';
+import { ErrorFallback } from '@/components/ui/error-boundary';
 
 interface Category {
   id: string;
@@ -26,24 +27,15 @@ const CategoryControls: React.FC<CategoryControlsProps> = ({
   onRetryCategories
 }) => {
   if (categoriesLoading) {
-    return (
-      <div className="flex justify-center">
-        <Loader2 className="h-6 w-6 animate-spin text-rose-500" />
-      </div>
-    );
+    return <CategoryTabsSkeleton />;
   }
 
   if (categoriesError) {
     return (
-      <div className="text-center py-4">
-        <p className="text-gray-500 mb-2">Failed to load categories</p>
-        <button 
-          onClick={onRetryCategories}
-          className="text-rose-600 hover:text-rose-700 underline"
-        >
-          Try again
-        </button>
-      </div>
+      <ErrorFallback 
+        error="Failed to load categories" 
+        onRetry={onRetryCategories}
+      />
     );
   }
 
