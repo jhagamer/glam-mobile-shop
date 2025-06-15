@@ -1,6 +1,5 @@
 
 import { useState, useEffect } from 'react';
-import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from '@/hooks/use-toast';
 
@@ -9,19 +8,14 @@ export const useWishlist = () => {
   const [wishlistItems, setWishlistItems] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
 
+  // Temporarily disable wishlist functionality until database table is created
   const fetchWishlist = async () => {
     if (!user) return;
-
+    
     try {
       setLoading(true);
-      const { data, error } = await supabase
-        .from('wishlist_items')
-        .select('product_id')
-        .eq('user_id', user.id);
-
-      if (error) throw error;
-
-      setWishlistItems(data?.map(item => item.product_id) || []);
+      // TODO: Implement once wishlist_items table is created
+      setWishlistItems([]);
     } catch (error) {
       console.error('Error fetching wishlist:', error);
     } finally {
@@ -40,16 +34,11 @@ export const useWishlist = () => {
     }
 
     try {
-      const { error } = await supabase
-        .from('wishlist_items')
-        .insert([{ user_id: user.id, product_id: productId }]);
-
-      if (error) throw error;
-
-      setWishlistItems(prev => [...prev, productId]);
+      // TODO: Implement once wishlist_items table is created
+      console.log('Wishlist functionality temporarily disabled');
       toast({
-        title: "Success",
-        description: "Item added to wishlist",
+        title: "Coming Soon",
+        description: "Wishlist functionality will be available soon",
       });
     } catch (error) {
       console.error('Error adding to wishlist:', error);
@@ -65,18 +54,11 @@ export const useWishlist = () => {
     if (!user) return;
 
     try {
-      const { error } = await supabase
-        .from('wishlist_items')
-        .delete()
-        .eq('user_id', user.id)
-        .eq('product_id', productId);
-
-      if (error) throw error;
-
-      setWishlistItems(prev => prev.filter(id => id !== productId));
+      // TODO: Implement once wishlist_items table is created
+      console.log('Wishlist functionality temporarily disabled');
       toast({
-        title: "Success",
-        description: "Item removed from wishlist",
+        title: "Coming Soon",
+        description: "Wishlist functionality will be available soon",
       });
     } catch (error) {
       console.error('Error removing from wishlist:', error);

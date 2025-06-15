@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -154,7 +155,10 @@ export const useHomeData = () => {
   };
 
   const fetchCartItemCount = async () => {
-    if (!user) return;
+    if (!user) {
+      setCartItemCount(0);
+      return;
+    }
 
     try {
       const { data, error } = await supabase
@@ -168,6 +172,7 @@ export const useHomeData = () => {
       setCartItemCount(totalCount);
     } catch (error) {
       console.error('Error fetching cart count:', error);
+      setCartItemCount(0);
     }
   };
 
@@ -245,28 +250,32 @@ export const useHomeData = () => {
     setCurrentPage(1);
   };
 
+  // Separate initialization effect
   useEffect(() => {
     const initializeData = async () => {
-      try {
-        // Load categories first (they don't require auth)
-        await fetchCategories();
-        
-        // Then load products
-        await fetchProducts();
-        
-        // Load cart count if user is authenticated
-        if (user) {
-          await fetchCartItemCount();
-        }
-      } catch (error) {
-        console.error('Error initializing data:', error);
-      }
+      console.log('Initializing data...');
+      // Always load categories first
+      await fetchCategories();
+      // Then load products
+      await fetchProducts();
     };
     
     initializeData();
+  }, []); // Only run on mount
+
+  // Separate effect for cart count when user changes
+  useEffect(() => {
+    if (user) {
+      console.log('User changed, fetching cart count...');
+      fetchCartItemCount();
+    } else {
+      setCartItemCount(0);
+    }
   }, [user]);
 
+  // Separate effect for products when filters change
   useEffect(() => {
+    console.log('Filters changed, fetching products...');
     fetchProducts(1);
   }, [selectedCategory, searchQuery, filters]);
 
