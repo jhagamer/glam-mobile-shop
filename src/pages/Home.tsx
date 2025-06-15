@@ -16,6 +16,7 @@ interface Product {
   price: number;
   image_url: string;
   category_id: string;
+  stock: number;
 }
 
 interface Category {
@@ -31,13 +32,21 @@ const Home = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(true);
   const [cartItemCount, setCartItemCount] = useState(0);
+  const [categoriesLoading, setCategoriesLoading] = useState(true);
 
   useEffect(() => {
-    fetchCategories();
-    fetchProducts();
-    if (user) {
-      fetchCartItemCount();
-    }
+    const initializeData = async () => {
+      await Promise.all([
+        fetchCategories(),
+        fetchProducts()
+      ]);
+      
+      if (user) {
+        fetchCartItemCount();
+      }
+    };
+    
+    initializeData();
   }, [user]);
 
   useEffect(() => {
@@ -46,20 +55,28 @@ const Home = () => {
 
   const fetchCategories = async () => {
     try {
+      setCategoriesLoading(true);
       const { data, error } = await supabase
         .from('categories')
         .select('*')
         .order('name');
 
-      if (error) throw error;
+      if (error) {
+        console.error('Categories error:', error);
+        throw error;
+      }
+      
+      console.log('Categories loaded:', data);
       setCategories(data || []);
     } catch (error) {
       console.error('Error fetching categories:', error);
       toast({
         title: "Error",
-        description: "Failed to load categories",
+        description: "Failed to load categories. Please refresh the page.",
         variant: "destructive"
       });
+    } finally {
+      setCategoriesLoading(false);
     }
   };
 
@@ -79,13 +96,19 @@ const Home = () => {
         query = query.or(`name.ilike.%${searchQuery}%,description.ilike.%${searchQuery}%`);
       }
 
-      const { data, error } = await query.order('created_at', { ascending: false });
+      const { data, error } = await query
+        .order('created_at', { ascending: false })
+        .limit(50); // Limit for better performance
 
-      if (error) throw error;
+      if (error) {
+        console.error('Products error:', error);
+        throw error;
+      }
+      
+      console.log('Products loaded:', data?.length || 0);
       setProducts(data || []);
     } catch (error) {
       console.error('Error fetching products:', error);
-      // Don't show error toast to prevent admin page errors
       setProducts([]);
     } finally {
       setLoading(false);
@@ -182,11 +205,17 @@ const Home = () => {
         <SearchBar value={searchQuery} onChange={setSearchQuery} />
 
         {/* Category Tabs */}
-        <CategoryTabs
-          categories={categories}
-          selectedCategory={selectedCategory}
-          onSelectCategory={setSelectedCategory}
-        />
+        {categoriesLoading ? (
+          <div className="flex justify-center">
+            <Loader2 className="h-6 w-6 animate-spin text-rose-500" />
+          </div>
+        ) : (
+          <CategoryTabs
+            categories={categories}
+            selectedCategory={selectedCategory}
+            onSelectCategory={setSelectedCategory}
+          />
+        )}
 
         {/* Products Grid */}
         {loading ? (
@@ -207,7 +236,12 @@ const Home = () => {
 
         {!loading && products.length === 0 && (
           <div className="text-center py-12">
-            <p className="text-gray-500">No products found</p>
+            <p className="text-gray-500">
+              {searchQuery || selectedCategory !== 'all' 
+                ? 'No products found for your search criteria' 
+                : 'No products available'
+              }
+            </p>
           </div>
         )}
       </div>

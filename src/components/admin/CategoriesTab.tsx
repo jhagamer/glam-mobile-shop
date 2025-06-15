@@ -21,45 +21,81 @@ export const CategoriesTab: React.FC<CategoriesTabProps> = ({
 }) => {
   const [isCategoryDialogOpen, setIsCategoryDialogOpen] = useState(false);
   const [newCategoryName, setNewCategoryName] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleCategorySubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
+    if (!newCategoryName.trim()) {
+      toast({
+        title: "Error",
+        description: "Please enter a category name",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setIsSubmitting(true);
+    
     try {
       const { error } = await supabase
         .from('categories')
-        .insert([{ name: newCategoryName }]);
+        .insert([{ name: newCategoryName.trim() }]);
 
       if (error) throw error;
+      
       toast({ title: "Success", description: "Category created successfully" });
       setIsCategoryDialogOpen(false);
       setNewCategoryName('');
       onRefreshCategories();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error creating category:', error);
       toast({
         title: "Error",
-        description: "Failed to create category",
+        description: error?.message || "Failed to create category",
         variant: "destructive"
       });
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
   const handleDeleteCategory = async (categoryId: string) => {
+    if (!confirm('Are you sure you want to delete this category? This action cannot be undone.')) {
+      return;
+    }
+
     try {
+      // Check if category has products first
+      const { data: products } = await supabase
+        .from('products')
+        .select('id')
+        .eq('category_id', categoryId)
+        .limit(1);
+
+      if (products && products.length > 0) {
+        toast({
+          title: "Cannot Delete",
+          description: "This category has products associated with it. Please remove or reassign the products first.",
+          variant: "destructive"
+        });
+        return;
+      }
+
       const { error } = await supabase
         .from('categories')
         .delete()
         .eq('id', categoryId);
 
       if (error) throw error;
+      
       toast({ title: "Success", description: "Category deleted successfully" });
       onRefreshCategories();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error deleting category:', error);
       toast({
         title: "Error",
-        description: "Failed to delete category",
+        description: error?.message || "Failed to delete category",
         variant: "destructive"
       });
     }
@@ -91,12 +127,12 @@ export const CategoriesTab: React.FC<CategoriesTabProps> = ({
             <Card key={category.id}>
               <CardContent className="p-4">
                 <div className="flex justify-between items-center">
-                  <h3 className="font-semibold">{category.name}</h3>
+                  <h3 className="font-semibold text-lg">{category.name}</h3>
                   <Button
                     variant="outline"
                     size="sm"
                     onClick={() => handleDeleteCategory(category.id)}
-                    className="text-red-600 hover:text-red-700"
+                    className="text-red-600 hover:text-red-700 hover:bg-red-50"
                   >
                     <Trash2 className="h-4 w-4" />
                   </Button>
@@ -121,10 +157,11 @@ export const CategoriesTab: React.FC<CategoriesTabProps> = ({
                 onChange={(e) => setNewCategoryName(e.target.value)}
                 placeholder="Enter category name"
                 required
+                disabled={isSubmitting}
               />
             </div>
-            <Button type="submit" className="w-full">
-              Create Category
+            <Button type="submit" className="w-full" disabled={isSubmitting}>
+              {isSubmitting ? 'Creating...' : 'Create Category'}
             </Button>
           </form>
         </DialogContent>
