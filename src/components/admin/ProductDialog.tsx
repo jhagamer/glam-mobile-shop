@@ -1,16 +1,8 @@
 
 import React, { useState, useEffect } from 'react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Plus } from 'lucide-react';
 import { Product, Category, ProductForm } from '@/types/admin';
-import { supabase } from '@/integrations/supabase/client';
-import { toast } from '@/hooks/use-toast';
-import { InlineCategoryForm } from './InlineCategoryForm';
+import { ProductForm as ProductFormComponent } from './ProductForm';
 
 interface ProductDialogProps {
   isOpen: boolean;
@@ -35,7 +27,6 @@ export const ProductDialog: React.FC<ProductDialogProps> = ({
     image_url: '',
     stock: ''
   });
-  const [showCategoryForm, setShowCategoryForm] = useState(false);
   const [localCategories, setLocalCategories] = useState<Category[]>(categories);
 
   useEffect(() => {
@@ -62,61 +53,10 @@ export const ProductDialog: React.FC<ProductDialogProps> = ({
         stock: ''
       });
     }
-    setShowCategoryForm(false);
   }, [product]);
 
   const handleCategoryCreated = (newCategory: Category) => {
     setLocalCategories(prev => [...prev, newCategory]);
-    setProductForm(prev => ({ ...prev, category_id: newCategory.id }));
-    setShowCategoryForm(false);
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    try {
-      const productData = {
-        name: productForm.name,
-        description: productForm.description,
-        price: parseFloat(productForm.price),
-        category_id: productForm.category_id,
-        image_url: productForm.image_url,
-        stock: parseInt(productForm.stock)
-      };
-
-      if (product) {
-        const { error } = await supabase
-          .from('products')
-          .update(productData)
-          .eq('id', product.id);
-
-        if (error) {
-          console.error('Update error:', error);
-          throw error;
-        }
-        toast({ title: "Success", description: "Product updated successfully" });
-      } else {
-        const { error } = await supabase
-          .from('products')
-          .insert([productData]);
-
-        if (error) {
-          console.error('Insert error:', error);
-          throw error;
-        }
-        toast({ title: "Success", description: "Product created successfully" });
-      }
-
-      onClose();
-      onSuccess();
-    } catch (error) {
-      console.error('Error saving product:', error);
-      toast({
-        title: "Error",
-        description: `Failed to ${product ? 'update' : 'create'} product: ${error.message}`,
-        variant: "destructive"
-      });
-    }
   };
 
   return (
@@ -127,115 +67,15 @@ export const ProductDialog: React.FC<ProductDialogProps> = ({
             {product ? 'Edit Product' : 'Add New Product'}
           </DialogTitle>
         </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <Label htmlFor="name">Product Name *</Label>
-            <Input
-              id="name"
-              value={productForm.name}
-              onChange={(e) => setProductForm({ ...productForm, name: e.target.value })}
-              required
-            />
-          </div>
-          <div>
-            <Label htmlFor="description">Description *</Label>
-            <Textarea
-              id="description"
-              value={productForm.description}
-              onChange={(e) => setProductForm({ ...productForm, description: e.target.value })}
-              required
-            />
-          </div>
-          <div>
-            <Label htmlFor="price">Price (NPR) *</Label>
-            <Input
-              id="price"
-              type="number"
-              step="0.01"
-              value={productForm.price}
-              onChange={(e) => setProductForm({ ...productForm, price: e.target.value })}
-              required
-            />
-          </div>
-          <div>
-            <Label htmlFor="stock">Stock Quantity *</Label>
-            <Input
-              id="stock"
-              type="number"
-              min="0"
-              value={productForm.stock}
-              onChange={(e) => setProductForm({ ...productForm, stock: e.target.value })}
-              required
-            />
-          </div>
-          <div>
-            <div className="flex items-center justify-between mb-2">
-              <Label htmlFor="category">Category *</Label>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => setShowCategoryForm(!showCategoryForm)}
-              >
-                <Plus className="h-4 w-4 mr-1" />
-                Add Category
-              </Button>
-            </div>
-            
-            {showCategoryForm && (
-              <div className="mb-3">
-                <InlineCategoryForm
-                  onCategoryCreated={handleCategoryCreated}
-                  onCancel={() => setShowCategoryForm(false)}
-                />
-              </div>
-            )}
-            
-            <Select 
-              value={productForm.category_id} 
-              onValueChange={(value) => setProductForm({ ...productForm, category_id: value })} 
-              required
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select category" />
-              </SelectTrigger>
-              <SelectContent>
-                {localCategories.map((category) => (
-                  <SelectItem key={category.id} value={category.id}>
-                    {category.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div>
-            <Label htmlFor="image_url">Image URL *</Label>
-            <Input
-              id="image_url"
-              type="url"
-              value={productForm.image_url}
-              onChange={(e) => setProductForm({ ...productForm, image_url: e.target.value })}
-              placeholder="https://example.com/image.jpg"
-              required
-            />
-            {productForm.image_url && (
-              <div className="mt-2">
-                <img
-                  src={productForm.image_url}
-                  alt="Product preview"
-                  className="w-full h-32 object-cover rounded-lg"
-                  onError={(e) => {
-                    const target = e.target as HTMLImageElement;
-                    target.style.display = 'none';
-                  }}
-                />
-              </div>
-            )}
-          </div>
-          <Button type="submit" className="w-full">
-            {product ? 'Update Product' : 'Create Product'}
-          </Button>
-        </form>
+        <ProductFormComponent
+          productForm={productForm}
+          setProductForm={setProductForm}
+          product={product}
+          categories={localCategories}
+          onSuccess={onSuccess}
+          onClose={onClose}
+          onCategoryCreated={handleCategoryCreated}
+        />
       </DialogContent>
     </Dialog>
   );
