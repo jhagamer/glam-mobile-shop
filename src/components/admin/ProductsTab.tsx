@@ -5,7 +5,6 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Edit, Trash2, Plus } from 'lucide-react';
 import { Product, Category } from '@/types/admin';
-import { formatPrice } from '@/utils/admin';
 import { ProductDialog } from './ProductDialog';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
@@ -15,6 +14,15 @@ interface ProductsTabProps {
   categories: Category[];
   onRefreshProducts: () => void;
 }
+
+const formatPrice = (price: number) => {
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: 'USD',
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+  }).format(price);
+};
 
 export const ProductsTab: React.FC<ProductsTabProps> = ({
   products,
@@ -64,51 +72,82 @@ export const ProductsTab: React.FC<ProductsTabProps> = ({
         </Button>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {products.map((product) => (
-          <Card key={product.id}>
-            <CardContent className="p-4">
-              <div className="aspect-square bg-gradient-to-br from-rose-100 to-purple-100 rounded-lg mb-4 flex items-center justify-center">
-                {product.image_url ? (
-                  <img
-                    src={product.image_url}
-                    alt={product.name}
-                    className="w-full h-full object-cover rounded-lg"
-                  />
-                ) : (
-                  <span className="text-4xl">💄</span>
-                )}
-              </div>
-              <h3 className="font-semibold mb-2">{product.name}</h3>
-              <p className="text-sm text-gray-600 mb-2 line-clamp-2">{product.description}</p>
-              <div className="flex justify-between items-center mb-3">
-                <span className="font-medium text-rose-600">{formatPrice(product.price)}</span>
-                <Badge variant={product.is_active ? "default" : "secondary"}>
-                  {product.is_active ? "Active" : "Inactive"}
-                </Badge>
-              </div>
-              <div className="flex space-x-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => openProductDialog(product)}
-                  className="flex-1"
-                >
-                  <Edit className="h-4 w-4" />
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => handleDeleteProduct(product.id)}
-                  className="text-red-600 hover:text-red-700"
-                >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
+      {products.length === 0 ? (
+        <Card>
+          <CardContent className="p-8 text-center">
+            <p className="text-gray-500 mb-4">No products found</p>
+            <Button onClick={() => openProductDialog()}>
+              <Plus className="h-4 w-4 mr-2" />
+              Add Your First Product
+            </Button>
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {products.map((product) => (
+            <Card key={product.id}>
+              <CardContent className="p-4">
+                <div className="aspect-square bg-gradient-to-br from-rose-100 to-purple-100 rounded-lg mb-4 flex items-center justify-center overflow-hidden">
+                  {product.image_url ? (
+                    <img
+                      src={product.image_url}
+                      alt={product.name}
+                      className="w-full h-full object-cover rounded-lg"
+                      onError={(e) => {
+                        e.target.src = '';
+                        e.target.style.display = 'none';
+                        e.target.parentElement.innerHTML = '<span className="text-4xl">📦</span>';
+                      }}
+                    />
+                  ) : (
+                    <span className="text-4xl">📦</span>
+                  )}
+                </div>
+                <h3 className="font-semibold mb-2">{product.name}</h3>
+                <p className="text-sm text-gray-600 mb-2 line-clamp-2">{product.description}</p>
+                <div className="space-y-2 mb-3">
+                  <div className="flex justify-between items-center">
+                    <span className="font-medium text-rose-600">{formatPrice(product.price)}</span>
+                    <Badge variant={product.is_active ? "default" : "secondary"}>
+                      {product.is_active ? "Active" : "Inactive"}
+                    </Badge>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-gray-600">Stock:</span>
+                    <Badge variant={product.stock > 0 ? "default" : "destructive"}>
+                      {product.stock || 0} units
+                    </Badge>
+                  </div>
+                  {product.categories && (
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-gray-600">Category:</span>
+                      <span className="text-sm font-medium">{product.categories.name}</span>
+                    </div>
+                  )}
+                </div>
+                <div className="flex space-x-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => openProductDialog(product)}
+                    className="flex-1"
+                  >
+                    <Edit className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleDeleteProduct(product.id)}
+                    className="text-red-600 hover:text-red-700"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
 
       <ProductDialog
         isOpen={isProductDialogOpen}

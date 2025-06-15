@@ -30,7 +30,8 @@ export const ProductDialog: React.FC<ProductDialogProps> = ({
     description: '',
     price: '',
     category_id: '',
-    image_url: ''
+    image_url: '',
+    stock: ''
   });
 
   useEffect(() => {
@@ -40,7 +41,8 @@ export const ProductDialog: React.FC<ProductDialogProps> = ({
         description: product.description || '',
         price: product.price.toString(),
         category_id: product.category_id || '',
-        image_url: product.image_url || ''
+        image_url: product.image_url || '',
+        stock: product.stock?.toString() || '0'
       });
     } else {
       setProductForm({
@@ -48,7 +50,8 @@ export const ProductDialog: React.FC<ProductDialogProps> = ({
         description: '',
         price: '',
         category_id: '',
-        image_url: ''
+        image_url: '',
+        stock: ''
       });
     }
   }, [product]);
@@ -62,7 +65,8 @@ export const ProductDialog: React.FC<ProductDialogProps> = ({
         description: productForm.description,
         price: parseFloat(productForm.price),
         category_id: productForm.category_id,
-        image_url: productForm.image_url || null
+        image_url: productForm.image_url,
+        stock: parseInt(productForm.stock)
       };
 
       if (product) {
@@ -71,14 +75,20 @@ export const ProductDialog: React.FC<ProductDialogProps> = ({
           .update(productData)
           .eq('id', product.id);
 
-        if (error) throw error;
+        if (error) {
+          console.error('Update error:', error);
+          throw error;
+        }
         toast({ title: "Success", description: "Product updated successfully" });
       } else {
         const { error } = await supabase
           .from('products')
           .insert([productData]);
 
-        if (error) throw error;
+        if (error) {
+          console.error('Insert error:', error);
+          throw error;
+        }
         toast({ title: "Success", description: "Product created successfully" });
       }
 
@@ -88,7 +98,7 @@ export const ProductDialog: React.FC<ProductDialogProps> = ({
       console.error('Error saving product:', error);
       toast({
         title: "Error",
-        description: "Failed to save product",
+        description: `Failed to ${product ? 'update' : 'create'} product: ${error.message}`,
         variant: "destructive"
       });
     }
@@ -96,7 +106,7 @@ export const ProductDialog: React.FC<ProductDialogProps> = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-md">
+      <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>
             {product ? 'Edit Product' : 'Add New Product'}
@@ -118,10 +128,11 @@ export const ProductDialog: React.FC<ProductDialogProps> = ({
               id="description"
               value={productForm.description}
               onChange={(e) => setProductForm({ ...productForm, description: e.target.value })}
+              required
             />
           </div>
           <div>
-            <Label htmlFor="price">Price</Label>
+            <Label htmlFor="price">Price ($)</Label>
             <Input
               id="price"
               type="number"
@@ -132,8 +143,19 @@ export const ProductDialog: React.FC<ProductDialogProps> = ({
             />
           </div>
           <div>
+            <Label htmlFor="stock">Stock Quantity</Label>
+            <Input
+              id="stock"
+              type="number"
+              min="0"
+              value={productForm.stock}
+              onChange={(e) => setProductForm({ ...productForm, stock: e.target.value })}
+              required
+            />
+          </div>
+          <div>
             <Label htmlFor="category">Category</Label>
-            <Select value={productForm.category_id} onValueChange={(value) => setProductForm({ ...productForm, category_id: value })}>
+            <Select value={productForm.category_id} onValueChange={(value) => setProductForm({ ...productForm, category_id: value })} required>
               <SelectTrigger>
                 <SelectValue placeholder="Select category" />
               </SelectTrigger>
@@ -147,13 +169,27 @@ export const ProductDialog: React.FC<ProductDialogProps> = ({
             </Select>
           </div>
           <div>
-            <Label htmlFor="image_url">Image URL (optional)</Label>
+            <Label htmlFor="image_url">Image URL</Label>
             <Input
               id="image_url"
               type="url"
               value={productForm.image_url}
               onChange={(e) => setProductForm({ ...productForm, image_url: e.target.value })}
+              placeholder="https://example.com/image.jpg"
+              required
             />
+            {productForm.image_url && (
+              <div className="mt-2">
+                <img
+                  src={productForm.image_url}
+                  alt="Product preview"
+                  className="w-full h-32 object-cover rounded-lg"
+                  onError={(e) => {
+                    e.target.style.display = 'none';
+                  }}
+                />
+              </div>
+            )}
           </div>
           <Button type="submit" className="w-full">
             {product ? 'Update Product' : 'Create Product'}

@@ -1,10 +1,10 @@
 
 export const formatPrice = (price: number) => {
-  return new Intl.NumberFormat('en-NP', {
+  return new Intl.NumberFormat('en-US', {
     style: 'currency',
-    currency: 'NPR',
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0
+    currency: 'USD',
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
   }).format(price);
 };
 

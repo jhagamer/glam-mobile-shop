@@ -7,6 +7,7 @@ export interface Product {
   image_url: string;
   category_id: string;
   is_active: boolean;
+  stock: number;
   categories?: { name: string };
 }
 
@@ -38,4 +39,5 @@ export interface ProductForm {
   price: string;
   category_id: string;
   image_url: string;
+  stock: string;
 }
