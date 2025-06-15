@@ -114,7 +114,7 @@ export const ProductDialog: React.FC<ProductDialogProps> = ({
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <Label htmlFor="name">Product Name</Label>
+            <Label htmlFor="name">Product Name *</Label>
             <Input
               id="name"
               value={productForm.name}
@@ -123,7 +123,7 @@ export const ProductDialog: React.FC<ProductDialogProps> = ({
             />
           </div>
           <div>
-            <Label htmlFor="description">Description</Label>
+            <Label htmlFor="description">Description *</Label>
             <Textarea
               id="description"
               value={productForm.description}
@@ -132,7 +132,7 @@ export const ProductDialog: React.FC<ProductDialogProps> = ({
             />
           </div>
           <div>
-            <Label htmlFor="price">Price ($)</Label>
+            <Label htmlFor="price">Price ($) *</Label>
             <Input
               id="price"
               type="number"
@@ -143,7 +143,7 @@ export const ProductDialog: React.FC<ProductDialogProps> = ({
             />
           </div>
           <div>
-            <Label htmlFor="stock">Stock Quantity</Label>
+            <Label htmlFor="stock">Stock Quantity *</Label>
             <Input
               id="stock"
               type="number"
@@ -154,7 +154,7 @@ export const ProductDialog: React.FC<ProductDialogProps> = ({
             />
           </div>
           <div>
-            <Label htmlFor="category">Category</Label>
+            <Label htmlFor="category">Category *</Label>
             <Select value={productForm.category_id} onValueChange={(value) => setProductForm({ ...productForm, category_id: value })} required>
               <SelectTrigger>
                 <SelectValue placeholder="Select category" />
@@ -169,7 +169,7 @@ export const ProductDialog: React.FC<ProductDialogProps> = ({
             </Select>
           </div>
           <div>
-            <Label htmlFor="image_url">Image URL</Label>
+            <Label htmlFor="image_url">Image URL *</Label>
             <Input
               id="image_url"
               type="url"
@@ -185,7 +185,8 @@ export const ProductDialog: React.FC<ProductDialogProps> = ({
                   alt="Product preview"
                   className="w-full h-32 object-cover rounded-lg"
                   onError={(e) => {
-                    e.target.style.display = 'none';
+                    const target = e.target as HTMLImageElement;
+                    target.style.display = 'none';
                   }}
                 />
               </div>

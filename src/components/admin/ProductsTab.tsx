@@ -8,21 +8,13 @@ import { Product, Category } from '@/types/admin';
 import { ProductDialog } from './ProductDialog';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
+import { formatPrice } from '@/utils/admin';
 
 interface ProductsTabProps {
   products: Product[];
   categories: Category[];
   onRefreshProducts: () => void;
 }
-
-const formatPrice = (price: number) => {
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'USD',
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2
-  }).format(price);
-};
 
 export const ProductsTab: React.FC<ProductsTabProps> = ({
   products,
@@ -94,9 +86,13 @@ export const ProductsTab: React.FC<ProductsTabProps> = ({
                       alt={product.name}
                       className="w-full h-full object-cover rounded-lg"
                       onError={(e) => {
-                        e.target.src = '';
-                        e.target.style.display = 'none';
-                        e.target.parentElement.innerHTML = '<span className="text-4xl">📦</span>';
+                        const target = e.target as HTMLImageElement;
+                        target.src = '';
+                        target.style.display = 'none';
+                        const parent = target.parentElement as HTMLElement;
+                        if (parent) {
+                          parent.innerHTML = '<span className="text-4xl">📦</span>';
+                        }
                       }}
                     />
                   ) : (
