@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Product, Category, Order, User } from '@/types/admin';
@@ -49,20 +50,19 @@ export const useAdminData = (userRole: string) => {
 
       if (ordersError) throw ordersError;
 
-      const ordersWithEmails = await Promise.all(
-        (ordersData || []).map(async (order) => {
-          const { data: profileData } = await supabase
-            .from('profiles')
-            .select('email')
-            .eq('id', order.user_id)
-            .single();
+      // Optimize: Fetch all profiles at once instead of one by one
+      const userIds = [...new Set((ordersData || []).map(order => order.user_id))];
+      const { data: profilesData } = await supabase
+        .from('profiles')
+        .select('id, email')
+        .in('id', userIds);
 
-          return {
-            ...order,
-            user_email: profileData?.email || 'Unknown'
-          };
-        })
-      );
+      const profileMap = new Map(profilesData?.map(profile => [profile.id, profile.email]) || []);
+
+      const ordersWithEmails = (ordersData || []).map(order => ({
+        ...order,
+        user_email: profileMap.get(order.user_id) || 'Unknown'
+      }));
 
       setOrders(ordersWithEmails);
     } catch (error) {
@@ -79,21 +79,27 @@ export const useAdminData = (userRole: string) => {
 
       if (profilesError) throw profilesError;
 
-      const usersWithRoles = await Promise.all(
-        (profilesData || []).map(async (profile) => {
-          const { data: rolesData } = await supabase
-            .from('user_roles')
-            .select('role')
-            .eq('user_id', profile.id);
+      // Optimize: Fetch all user roles at once
+      const userIds = (profilesData || []).map(profile => profile.id);
+      const { data: rolesData } = await supabase
+        .from('user_roles')
+        .select('user_id, role')
+        .in('user_id', userIds);
 
-          return {
-            id: profile.id,
-            email: profile.email || 'No email',
-            created_at: profile.created_at,
-            roles: rolesData?.map(r => r.role) || []
-          };
-        })
-      );
+      const rolesMap = new Map<string, string[]>();
+      rolesData?.forEach(roleData => {
+        if (!rolesMap.has(roleData.user_id)) {
+          rolesMap.set(roleData.user_id, []);
+        }
+        rolesMap.get(roleData.user_id)?.push(roleData.role);
+      });
+
+      const usersWithRoles = (profilesData || []).map(profile => ({
+        id: profile.id,
+        email: profile.email || 'No email',
+        created_at: profile.created_at,
+        roles: rolesMap.get(profile.id) || []
+      }));
 
       setUsers(usersWithRoles);
     } catch (error) {

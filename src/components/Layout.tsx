@@ -12,9 +12,8 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { ShoppingCart, User, LogOut, Settings, Package, History, RefreshCw, AlertCircle } from 'lucide-react';
+import { ShoppingCart, User, LogOut, Settings, Package, History } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Card, CardContent } from '@/components/ui/card';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -22,7 +21,7 @@ interface LayoutProps {
 }
 
 const Layout: React.FC<LayoutProps> = ({ children, cartItemCount = 0 }) => {
-  const { user, userRole, signOut, refreshUserRole } = useAuth();
+  const { user, userRole, signOut } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -46,41 +45,13 @@ const Layout: React.FC<LayoutProps> = ({ children, cartItemCount = 0 }) => {
     navigate('/');
   };
 
-  const handleRefreshRole = async () => {
-    console.log('Manually refreshing user role...');
-    await refreshUserRole();
-    console.log('User role after refresh:', userRole);
+  const handleSignOut = async () => {
+    await signOut();
+    navigate('/auth');
   };
-
-  // Debug info for troubleshooting
-  const isExpectedAdmin = user?.email === 'shopcrimsonhouse@gmail.com';
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-rose-50 via-white to-purple-50">
-      {/* Debug Info Card - Only show if there's a role mismatch */}
-      {isExpectedAdmin && userRole !== 'admin' && (
-        <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4">
-          <div className="flex items-center">
-            <AlertCircle className="h-5 w-5 text-yellow-400 mr-2" />
-            <div className="text-sm">
-              <p className="font-medium text-yellow-800">Debug Info:</p>
-              <p className="text-yellow-700">Email: {user?.email}</p>
-              <p className="text-yellow-700">User ID: {user?.id}</p>
-              <p className="text-yellow-700">Current Role: {userRole || 'loading...'}</p>
-              <p className="text-yellow-700">Expected: admin (based on email)</p>
-              <Button 
-                size="sm" 
-                onClick={handleRefreshRole}
-                className="mt-2 bg-yellow-500 hover:bg-yellow-600"
-              >
-                <RefreshCw className="h-4 w-4 mr-1" />
-                Refresh Role
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* Header */}
       <header className="bg-white/80 backdrop-blur-md border-b border-rose-100 sticky top-0 z-50 shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -100,16 +71,6 @@ const Layout: React.FC<LayoutProps> = ({ children, cartItemCount = 0 }) => {
 
             {/* Navigation */}
             <div className="flex items-center space-x-4">
-              {/* Role refresh button for debugging */}
-              <Button
-                variant="ghost"
-                onClick={handleRefreshRole}
-                className="text-gray-600 hover:text-gray-700"
-                size="sm"
-              >
-                <RefreshCw className="h-4 w-4" />
-              </Button>
-
               {userRole === 'admin' && (
                 <div className="flex items-center space-x-2">
                   <Button
@@ -131,20 +92,22 @@ const Layout: React.FC<LayoutProps> = ({ children, cartItemCount = 0 }) => {
                 </div>
               )}
 
-              <Button
-                variant="ghost"
-                onClick={handleCartClick}
-                className="relative text-rose-600 hover:text-rose-700 hover:bg-rose-50"
-              >
-                <ShoppingCart className="h-5 w-5" />
-                {cartItemCount > 0 && (
-                  <Badge 
-                    className="absolute -top-2 -right-2 h-5 w-5 flex items-center justify-center p-0 bg-gradient-to-r from-rose-500 to-purple-600 text-white text-xs"
-                  >
-                    {cartItemCount}
-                  </Badge>
-                )}
-              </Button>
+              {userRole === 'consumer' && (
+                <Button
+                  variant="ghost"
+                  onClick={handleCartClick}
+                  className="relative text-rose-600 hover:text-rose-700 hover:bg-rose-50"
+                >
+                  <ShoppingCart className="h-5 w-5" />
+                  {cartItemCount > 0 && (
+                    <Badge 
+                      className="absolute -top-2 -right-2 h-5 w-5 flex items-center justify-center p-0 bg-gradient-to-r from-rose-500 to-purple-600 text-white text-xs"
+                    >
+                      {cartItemCount}
+                    </Badge>
+                  )}
+                </Button>
+              )}
 
               {/* Profile Dropdown */}
               <DropdownMenu>
@@ -167,16 +130,9 @@ const Layout: React.FC<LayoutProps> = ({ children, cartItemCount = 0 }) => {
                       <p className="text-xs leading-none text-muted-foreground">
                         {user?.email}
                       </p>
-                      <div className="flex items-center space-x-2">
-                        <p className="text-xs leading-none text-blue-600">
-                          Role: {userRole || 'loading...'}
-                        </p>
-                        {isExpectedAdmin && userRole !== 'admin' && (
-                          <Badge variant="destructive" className="text-xs">
-                            Issue
-                          </Badge>
-                        )}
-                      </div>
+                      <p className="text-xs leading-none text-blue-600">
+                        Role: {userRole || 'loading...'}
+                      </p>
                     </div>
                   </DropdownMenuLabel>
                   <DropdownMenuSeparator />
@@ -205,9 +161,9 @@ const Layout: React.FC<LayoutProps> = ({ children, cartItemCount = 0 }) => {
                     </>
                   )}
                   
-                  <DropdownMenuItem onClick={signOut}>
+                  <DropdownMenuItem onClick={handleSignOut}>
                     <LogOut className="mr-2 h-4 w-4" />
-                    <span>Log out</span>
+                    <span>Sign out</span>
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
