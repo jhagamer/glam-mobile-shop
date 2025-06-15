@@ -5,6 +5,8 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ShoppingCart, Heart } from 'lucide-react';
 import { formatPrice } from '@/utils/currency';
+import { ImageZoom } from '@/components/ui/image-zoom';
+import { useWishlist } from '@/hooks/useWishlist';
 
 interface Product {
   id: string;
@@ -21,15 +23,22 @@ interface ProductCardProps {
 }
 
 const ProductCard: React.FC<ProductCardProps> = ({ product, onAddToCart }) => {
+  const { toggleWishlist, isInWishlist } = useWishlist();
   const isOutOfStock = product.stock !== undefined && product.stock <= 0;
   const isLowStock = product.stock !== undefined && product.stock > 0 && product.stock <= 5;
+  const inWishlist = isInWishlist(product.id);
+
+  const handleWishlistClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    toggleWishlist(product.id);
+  };
 
   return (
     <Card className="group overflow-hidden border-0 shadow-lg hover:shadow-2xl transition-all duration-300 transform hover:scale-105 bg-white/80 backdrop-blur-sm">
       <div className="relative overflow-hidden">
         <div className="aspect-square bg-gradient-to-br from-rose-100 to-purple-100 flex items-center justify-center">
           {product.image_url ? (
-            <img
+            <ImageZoom
               src={product.image_url}
               alt={product.name}
               className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
@@ -56,8 +65,9 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onAddToCart }) => {
             variant="ghost"
             size="sm"
             className="h-8 w-8 p-0 bg-white/80 hover:bg-white"
+            onClick={handleWishlistClick}
           >
-            <Heart className="h-4 w-4 text-rose-500" />
+            <Heart className={`h-4 w-4 ${inWishlist ? 'text-rose-500 fill-rose-500' : 'text-rose-500'}`} />
           </Button>
         </div>
       </div>

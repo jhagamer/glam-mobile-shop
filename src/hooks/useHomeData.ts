@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -29,6 +28,19 @@ export const useHomeData = () => {
   const [cartItemCount, setCartItemCount] = useState(0);
   const [categoriesLoading, setCategoriesLoading] = useState(true);
   const [categoriesError, setCategoriesError] = useState(false);
+  
+  // New pagination and filtering state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalCount, setTotalCount] = useState(0);
+  const [filters, setFilters] = useState({
+    minPrice: 0,
+    maxPrice: 10000,
+    stockStatus: 'all' as 'all' | 'in_stock' | 'low_stock' | 'out_of_stock',
+    sortBy: 'newest' as 'name' | 'price_asc' | 'price_desc' | 'newest'
+  });
+
+  const ITEMS_PER_PAGE = 12;
 
   const fetchCategories = async () => {
     try {
@@ -60,25 +72,63 @@ export const useHomeData = () => {
     }
   };
 
-  const fetchProducts = async () => {
+  const fetchProducts = async (page = 1) => {
     try {
       setLoading(true);
       let query = supabase
         .from('products')
-        .select('*')
+        .select('*', { count: 'exact' })
         .eq('is_active', true);
 
+      // Apply category filter
       if (selectedCategory !== 'all') {
         query = query.eq('category_id', selectedCategory);
       }
 
+      // Apply search filter
       if (searchQuery.trim()) {
         query = query.or(`name.ilike.%${searchQuery}%,description.ilike.%${searchQuery}%`);
       }
 
-      const { data, error } = await query
-        .order('created_at', { ascending: false })
-        .limit(50);
+      // Apply price filters
+      query = query.gte('price', filters.minPrice).lte('price', filters.maxPrice);
+
+      // Apply stock status filter
+      switch (filters.stockStatus) {
+        case 'in_stock':
+          query = query.gt('stock', 5);
+          break;
+        case 'low_stock':
+          query = query.gt('stock', 0).lte('stock', 5);
+          break;
+        case 'out_of_stock':
+          query = query.eq('stock', 0);
+          break;
+      }
+
+      // Apply sorting
+      switch (filters.sortBy) {
+        case 'name':
+          query = query.order('name');
+          break;
+        case 'price_asc':
+          query = query.order('price', { ascending: true });
+          break;
+        case 'price_desc':
+          query = query.order('price', { ascending: false });
+          break;
+        case 'newest':
+        default:
+          query = query.order('created_at', { ascending: false });
+          break;
+      }
+
+      // Apply pagination
+      const from = (page - 1) * ITEMS_PER_PAGE;
+      const to = from + ITEMS_PER_PAGE - 1;
+      query = query.range(from, to);
+
+      const { data, error, count } = await query;
 
       if (error) {
         console.error('Products error:', error);
@@ -87,6 +137,9 @@ export const useHomeData = () => {
       
       console.log('Products loaded:', data?.length || 0);
       setProducts(data || []);
+      setTotalCount(count || 0);
+      setTotalPages(Math.ceil((count || 0) / ITEMS_PER_PAGE));
+      setCurrentPage(page);
     } catch (error) {
       console.error('Error fetching products:', error);
       setProducts([]);
@@ -173,6 +226,25 @@ export const useHomeData = () => {
     }
   };
 
+  const handlePageChange = (page: number) => {
+    fetchProducts(page);
+  };
+
+  const handleFiltersChange = (newFilters: typeof filters) => {
+    setFilters(newFilters);
+    setCurrentPage(1);
+  };
+
+  const clearFilters = () => {
+    setFilters({
+      minPrice: 0,
+      maxPrice: 10000,
+      stockStatus: 'all',
+      sortBy: 'newest'
+    });
+    setCurrentPage(1);
+  };
+
   useEffect(() => {
     const initializeData = async () => {
       try {
@@ -195,8 +267,8 @@ export const useHomeData = () => {
   }, [user]);
 
   useEffect(() => {
-    fetchProducts();
-  }, [selectedCategory, searchQuery]);
+    fetchProducts(1);
+  }, [selectedCategory, searchQuery, filters]);
 
   return {
     products,
@@ -211,6 +283,14 @@ export const useHomeData = () => {
     categoriesError,
     fetchCategories,
     handleAddToCart,
-    fetchProducts
+    fetchProducts,
+    // New pagination and filtering returns
+    currentPage,
+    totalPages,
+    totalCount,
+    handlePageChange,
+    filters,
+    handleFiltersChange,
+    clearFilters,
   };
 };

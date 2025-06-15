@@ -1,10 +1,11 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import Layout from '@/components/Layout';
 import SearchBar from '@/components/SearchBar';
 import HeroSection from '@/components/home/HeroSection';
 import CategoryControls from '@/components/home/CategoryControls';
 import ProductsGrid from '@/components/home/ProductsGrid';
+import SearchFilters from '@/components/SearchFilters';
 import { ErrorBoundary } from '@/components/ui/error-boundary';
 import { useHomeData } from '@/hooks/useHomeData';
 
@@ -22,8 +23,17 @@ const Home = () => {
     categoriesError,
     fetchCategories,
     handleAddToCart,
-    fetchProducts
+    fetchProducts,
+    currentPage,
+    totalPages,
+    totalCount,
+    handlePageChange,
+    filters,
+    handleFiltersChange,
+    clearFilters,
   } = useHomeData();
+
+  const [filtersOpen, setFiltersOpen] = useState(false);
 
   return (
     <ErrorBoundary>
@@ -39,6 +49,13 @@ const Home = () => {
             categoriesError={categoriesError}
             onRetryCategories={fetchCategories}
           />
+          <SearchFilters
+            filters={filters}
+            onFiltersChange={handleFiltersChange}
+            onClearFilters={clearFilters}
+            isOpen={filtersOpen}
+            onToggle={() => setFiltersOpen(!filtersOpen)}
+          />
           <ProductsGrid
             products={products}
             loading={loading}
@@ -46,6 +63,10 @@ const Home = () => {
             selectedCategory={selectedCategory}
             onAddToCart={handleAddToCart}
             onRetry={fetchProducts}
+            currentPage={currentPage}
+            totalPages={totalPages}
+            totalCount={totalCount}
+            onPageChange={handlePageChange}
           />
         </div>
       </Layout>
