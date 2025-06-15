@@ -2,22 +2,33 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
 
 export const useWishlist = () => {
   const { user } = useAuth();
   const [wishlistItems, setWishlistItems] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
 
-  // Temporarily disable wishlist functionality until database table is created
   const fetchWishlist = async () => {
     if (!user) return;
     
     try {
       setLoading(true);
-      // TODO: Implement once wishlist_items table is created
-      setWishlistItems([]);
+      const { data, error } = await supabase
+        .from('wishlist_items')
+        .select('product_id')
+        .eq('user_id', user.id);
+
+      if (error) throw error;
+
+      setWishlistItems(data?.map(item => item.product_id) || []);
     } catch (error) {
       console.error('Error fetching wishlist:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load wishlist.",
+        variant: "destructive"
+      });
     } finally {
       setLoading(false);
     }
@@ -34,11 +45,25 @@ export const useWishlist = () => {
     }
 
     try {
-      // TODO: Implement once wishlist_items table is created
-      console.log('Wishlist functionality temporarily disabled');
+      const { error } = await supabase
+        .from('wishlist_items')
+        .insert([{ user_id: user.id, product_id: productId }]);
+
+      if (error) {
+        if (error.code === '23505') { // unique_violation
+          toast({
+            title: "Already in Wishlist",
+            description: "This item is already in your wishlist.",
+          });
+          return;
+        }
+        throw error;
+      }
+
+      setWishlistItems(prev => [...prev, productId]);
       toast({
-        title: "Coming Soon",
-        description: "Wishlist functionality will be available soon",
+        title: "Success",
+        description: "Item added to wishlist",
       });
     } catch (error) {
       console.error('Error adding to wishlist:', error);
@@ -54,11 +79,18 @@ export const useWishlist = () => {
     if (!user) return;
 
     try {
-      // TODO: Implement once wishlist_items table is created
-      console.log('Wishlist functionality temporarily disabled');
+      const { error } = await supabase
+        .from('wishlist_items')
+        .delete()
+        .eq('user_id', user.id)
+        .eq('product_id', productId);
+
+      if (error) throw error;
+
+      setWishlistItems(prev => prev.filter(id => id !== productId));
       toast({
-        title: "Coming Soon",
-        description: "Wishlist functionality will be available soon",
+        title: "Success",
+        description: "Item removed from wishlist",
       });
     } catch (error) {
       console.error('Error removing from wishlist:', error);
