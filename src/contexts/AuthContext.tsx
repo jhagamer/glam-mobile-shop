@@ -30,21 +30,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [userRole, setUserRole] = useState<'admin' | 'consumer' | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const checkAdminSlotAvailable = async () => {
-    try {
-      const { data, error } = await supabase.rpc('is_admin_slot_available');
-      if (error) {
-        console.error('Error checking admin slot:', error);
-        return false;
-      }
-      console.log('Admin slot check result:', data);
-      return data;
-    } catch (error) {
-      console.error('Error in checkAdminSlotAvailable:', error);
-      return false;
-    }
-  };
-
   const fetchUserRole = async (userId: string) => {
     try {
       console.log('Fetching user role for:', userId);
@@ -79,9 +64,30 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const assignAdminRoleToGitHubUser = async (userId: string) => {
     try {
-      console.log('Starting admin role assignment for GitHub user:', userId);
+      console.log('=== STARTING ADMIN ROLE ASSIGNMENT ===');
+      console.log('User ID:', userId);
       
-      // First, delete any existing roles for this user
+      // First, check if user already has admin role
+      const { data: existingRoles, error: fetchError } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', userId);
+
+      console.log('Existing roles:', existingRoles);
+
+      if (fetchError) {
+        console.error('Error fetching existing roles:', fetchError);
+      }
+
+      // Check if user already has admin role
+      const hasAdminRole = existingRoles?.some(role => role.role === 'admin');
+      if (hasAdminRole) {
+        console.log('User already has admin role');
+        return true;
+      }
+
+      // Delete all existing roles for this user first
+      console.log('Deleting existing roles...');
       const { error: deleteError } = await supabase
         .from('user_roles')
         .delete()
@@ -90,23 +96,28 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (deleteError) {
         console.error('Error deleting existing roles:', deleteError);
       } else {
-        console.log('Existing roles deleted successfully');
+        console.log('Successfully deleted existing roles');
       }
 
-      // Then assign admin role
-      const { error: insertError } = await supabase
+      // Insert admin role
+      console.log('Inserting admin role...');
+      const { data: insertData, error: insertError } = await supabase
         .from('user_roles')
-        .insert([{ user_id: userId, role: 'admin' }]);
+        .insert([{ user_id: userId, role: 'admin' }])
+        .select();
       
+      console.log('Insert result:', { insertData, insertError });
+
       if (insertError) {
         console.error('Error inserting admin role:', insertError);
         throw insertError;
       }
       
-      console.log('Admin role assigned successfully to user:', userId);
+      console.log('=== ADMIN ROLE ASSIGNED SUCCESSFULLY ===');
       return true;
     } catch (error) {
-      console.error('Database error assigning admin role:', error);
+      console.error('=== ADMIN ROLE ASSIGNMENT FAILED ===');
+      console.error('Error:', error);
       throw error;
     }
   };
@@ -140,11 +151,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           if (session.user.app_metadata.provider === 'github') {
             console.log('=== GITHUB USER DETECTED ===');
             
-            // For GitHub users, always try to assign admin role
             try {
+              console.log('Assigning admin role to GitHub user...');
               await assignAdminRoleToGitHubUser(session.user.id);
+              
+              // Force set admin role immediately
               setUserRole('admin');
-              console.log('GitHub user assigned admin role successfully');
+              console.log('Admin role set in state');
               
               if (event === 'SIGNED_IN') {
                 toast({
@@ -155,10 +168,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               }
             } catch (error) {
               console.error('Failed to assign admin role to GitHub user:', error);
-              // Don't sign out, just show error and use existing role
               toast({
-                title: "Role Assignment Warning",
-                description: "Could not assign admin role. Please contact support if this persists.",
+                title: "Role Assignment Error",
+                description: "Could not assign admin role. Please contact support.",
                 variant: "destructive"
               });
               
