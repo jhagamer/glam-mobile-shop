@@ -5,7 +5,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Plus, Trash2 } from 'lucide-react';
+import { Plus, Trash2, Loader2 } from 'lucide-react';
 import { Category } from '@/types/admin';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
@@ -13,11 +13,13 @@ import { toast } from '@/hooks/use-toast';
 interface CategoriesTabProps {
   categories: Category[];
   onRefreshCategories: () => void;
+  isLoading?: boolean;
 }
 
 export const CategoriesTab: React.FC<CategoriesTabProps> = ({
   categories,
-  onRefreshCategories
+  onRefreshCategories,
+  isLoading = false
 }) => {
   const [isCategoryDialogOpen, setIsCategoryDialogOpen] = useState(false);
   const [newCategoryName, setNewCategoryName] = useState('');
@@ -100,6 +102,14 @@ export const CategoriesTab: React.FC<CategoriesTabProps> = ({
       });
     }
   };
+
+  if (isLoading) {
+    return (
+      <div className="flex justify-center items-center py-12">
+        <Loader2 className="h-8 w-8 animate-spin text-rose-500" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">

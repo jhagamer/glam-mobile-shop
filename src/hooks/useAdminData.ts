@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Product, Category, Order, User } from '@/types/admin';
@@ -9,9 +8,12 @@ export const useAdminData = (userRole: string) => {
   const [categories, setCategories] = useState<Category[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
   const [users, setUsers] = useState<User[]>([]);
+  const [isLoadingProducts, setIsLoadingProducts] = useState(false);
+  const [isLoadingCategories, setIsLoadingCategories] = useState(false);
 
   const fetchProducts = async () => {
     try {
+      setIsLoadingProducts(true);
       const { data, error } = await supabase
         .from('products')
         .select(`
@@ -24,11 +26,19 @@ export const useAdminData = (userRole: string) => {
       setProducts(data || []);
     } catch (error) {
       console.error('Error fetching products:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load products",
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoadingProducts(false);
     }
   };
 
   const fetchCategories = async () => {
     try {
+      setIsLoadingCategories(true);
       const { data, error } = await supabase
         .from('categories')
         .select('*')
@@ -38,6 +48,37 @@ export const useAdminData = (userRole: string) => {
       setCategories(data || []);
     } catch (error) {
       console.error('Error fetching categories:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load categories",
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoadingCategories(false);
+    }
+  };
+
+  const createCategory = async (name: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('categories')
+        .insert([{ name: name.trim() }])
+        .select()
+        .single();
+
+      if (error) throw error;
+      
+      toast({ title: "Success", description: "Category created successfully" });
+      await fetchCategories();
+      return data;
+    } catch (error: any) {
+      console.error('Error creating category:', error);
+      toast({
+        title: "Error",
+        description: error?.message || "Failed to create category",
+        variant: "destructive"
+      });
+      throw error;
     }
   };
 
@@ -158,11 +199,14 @@ export const useAdminData = (userRole: string) => {
     categories,
     orders,
     users,
+    isLoadingProducts,
+    isLoadingCategories,
     fetchProducts,
     fetchCategories,
     fetchOrders,
     fetchUsers,
     updateOrderStatus,
-    promoteToAdmin
+    promoteToAdmin,
+    createCategory
   };
 };

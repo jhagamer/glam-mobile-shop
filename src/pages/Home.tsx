@@ -33,16 +33,23 @@ const Home = () => {
   const [loading, setLoading] = useState(true);
   const [cartItemCount, setCartItemCount] = useState(0);
   const [categoriesLoading, setCategoriesLoading] = useState(true);
+  const [categoriesError, setCategoriesError] = useState(false);
 
   useEffect(() => {
     const initializeData = async () => {
-      await Promise.all([
-        fetchCategories(),
-        fetchProducts()
-      ]);
-      
-      if (user) {
-        fetchCartItemCount();
+      try {
+        // Load categories first (they don't require auth)
+        await fetchCategories();
+        
+        // Then load products
+        await fetchProducts();
+        
+        // Load cart count if user is authenticated
+        if (user) {
+          await fetchCartItemCount();
+        }
+      } catch (error) {
+        console.error('Error initializing data:', error);
       }
     };
     
@@ -56,6 +63,8 @@ const Home = () => {
   const fetchCategories = async () => {
     try {
       setCategoriesLoading(true);
+      setCategoriesError(false);
+      
       const { data, error } = await supabase
         .from('categories')
         .select('*')
@@ -66,13 +75,14 @@ const Home = () => {
         throw error;
       }
       
-      console.log('Categories loaded:', data);
+      console.log('Categories loaded:', data?.length || 0);
       setCategories(data || []);
     } catch (error) {
       console.error('Error fetching categories:', error);
+      setCategoriesError(true);
       toast({
         title: "Error",
-        description: "Failed to load categories. Please refresh the page.",
+        description: "Failed to load categories. Some features may not work properly.",
         variant: "destructive"
       });
     } finally {
@@ -98,7 +108,7 @@ const Home = () => {
 
       const { data, error } = await query
         .order('created_at', { ascending: false })
-        .limit(50); // Limit for better performance
+        .limit(50);
 
       if (error) {
         console.error('Products error:', error);
@@ -110,6 +120,11 @@ const Home = () => {
     } catch (error) {
       console.error('Error fetching products:', error);
       setProducts([]);
+      toast({
+        title: "Error",
+        description: "Failed to load products. Please try refreshing the page.",
+        variant: "destructive"
+      });
     } finally {
       setLoading(false);
     }
@@ -208,6 +223,16 @@ const Home = () => {
         {categoriesLoading ? (
           <div className="flex justify-center">
             <Loader2 className="h-6 w-6 animate-spin text-rose-500" />
+          </div>
+        ) : categoriesError ? (
+          <div className="text-center py-4">
+            <p className="text-gray-500 mb-2">Failed to load categories</p>
+            <button 
+              onClick={fetchCategories}
+              className="text-rose-600 hover:text-rose-700 underline"
+            >
+              Try again
+            </button>
           </div>
         ) : (
           <CategoryTabs

@@ -6,9 +6,11 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Plus } from 'lucide-react';
 import { Product, Category, ProductForm } from '@/types/admin';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
+import { InlineCategoryForm } from './InlineCategoryForm';
 
 interface ProductDialogProps {
   isOpen: boolean;
@@ -33,6 +35,12 @@ export const ProductDialog: React.FC<ProductDialogProps> = ({
     image_url: '',
     stock: ''
   });
+  const [showCategoryForm, setShowCategoryForm] = useState(false);
+  const [localCategories, setLocalCategories] = useState<Category[]>(categories);
+
+  useEffect(() => {
+    setLocalCategories(categories);
+  }, [categories]);
 
   useEffect(() => {
     if (product) {
@@ -54,7 +62,14 @@ export const ProductDialog: React.FC<ProductDialogProps> = ({
         stock: ''
       });
     }
+    setShowCategoryForm(false);
   }, [product]);
+
+  const handleCategoryCreated = (newCategory: Category) => {
+    setLocalCategories(prev => [...prev, newCategory]);
+    setProductForm(prev => ({ ...prev, category_id: newCategory.id }));
+    setShowCategoryForm(false);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -132,7 +147,7 @@ export const ProductDialog: React.FC<ProductDialogProps> = ({
             />
           </div>
           <div>
-            <Label htmlFor="price">Price ($) *</Label>
+            <Label htmlFor="price">Price (NPR) *</Label>
             <Input
               id="price"
               type="number"
@@ -154,13 +169,38 @@ export const ProductDialog: React.FC<ProductDialogProps> = ({
             />
           </div>
           <div>
-            <Label htmlFor="category">Category *</Label>
-            <Select value={productForm.category_id} onValueChange={(value) => setProductForm({ ...productForm, category_id: value })} required>
+            <div className="flex items-center justify-between mb-2">
+              <Label htmlFor="category">Category *</Label>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setShowCategoryForm(!showCategoryForm)}
+              >
+                <Plus className="h-4 w-4 mr-1" />
+                Add Category
+              </Button>
+            </div>
+            
+            {showCategoryForm && (
+              <div className="mb-3">
+                <InlineCategoryForm
+                  onCategoryCreated={handleCategoryCreated}
+                  onCancel={() => setShowCategoryForm(false)}
+                />
+              </div>
+            )}
+            
+            <Select 
+              value={productForm.category_id} 
+              onValueChange={(value) => setProductForm({ ...productForm, category_id: value })} 
+              required
+            >
               <SelectTrigger>
                 <SelectValue placeholder="Select category" />
               </SelectTrigger>
               <SelectContent>
-                {categories.map((category) => (
+                {localCategories.map((category) => (
                   <SelectItem key={category.id} value={category.id}>
                     {category.name}
                   </SelectItem>

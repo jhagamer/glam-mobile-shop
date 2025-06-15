@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Edit, Trash2, Plus } from 'lucide-react';
+import { Edit, Trash2, Plus, Loader2 } from 'lucide-react';
 import { Product, Category } from '@/types/admin';
 import { ProductDialog } from './ProductDialog';
 import { supabase } from '@/integrations/supabase/client';
@@ -14,17 +14,23 @@ interface ProductsTabProps {
   products: Product[];
   categories: Category[];
   onRefreshProducts: () => void;
+  isLoading?: boolean;
 }
 
 export const ProductsTab: React.FC<ProductsTabProps> = ({
   products,
   categories,
-  onRefreshProducts
+  onRefreshProducts,
+  isLoading = false
 }) => {
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [isProductDialogOpen, setIsProductDialogOpen] = useState(false);
 
   const handleDeleteProduct = async (productId: string) => {
+    if (!confirm('Are you sure you want to delete this product? This action cannot be undone.')) {
+      return;
+    }
+
     try {
       const { error } = await supabase
         .from('products')
@@ -53,6 +59,14 @@ export const ProductsTab: React.FC<ProductsTabProps> = ({
     setIsProductDialogOpen(false);
     setSelectedProduct(null);
   };
+
+  if (isLoading) {
+    return (
+      <div className="flex justify-center items-center py-12">
+        <Loader2 className="h-8 w-8 animate-spin text-rose-500" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -103,7 +117,7 @@ export const ProductsTab: React.FC<ProductsTabProps> = ({
                 <p className="text-sm text-gray-600 mb-2 line-clamp-2">{product.description}</p>
                 <div className="space-y-2 mb-3">
                   <div className="flex justify-between items-center">
-                    <span className="font-medium text-rose-600">{formatPrice(product.price)}</span>
+                    <span className="font-medium text-rose-600">NPR {formatPrice(product.price)}</span>
                     <Badge variant={product.is_active ? "default" : "secondary"}>
                       {product.is_active ? "Active" : "Inactive"}
                     </Badge>

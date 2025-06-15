@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import Layout from '@/components/Layout';
 import { Navigate } from 'react-router-dom';
@@ -11,7 +11,22 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 const ProductManagement = () => {
   const { userRole, loading } = useAuth();
-  const { products, categories, fetchProducts, fetchCategories } = useAdminData(userRole);
+  const { 
+    products, 
+    categories, 
+    isLoadingProducts,
+    isLoadingCategories,
+    fetchProducts, 
+    fetchCategories 
+  } = useAdminData(userRole);
+
+  // Fetch data when component mounts or userRole changes
+  useEffect(() => {
+    if (userRole === 'admin') {
+      fetchProducts();
+      fetchCategories();
+    }
+  }, [userRole]);
 
   // Redirect if not admin
   if (!loading && userRole !== 'admin') {
@@ -55,6 +70,7 @@ const ProductManagement = () => {
               products={products}
               categories={categories}
               onRefreshProducts={fetchProducts}
+              isLoading={isLoadingProducts}
             />
           </TabsContent>
           
@@ -62,6 +78,7 @@ const ProductManagement = () => {
             <CategoriesTab
               categories={categories}
               onRefreshCategories={fetchCategories}
+              isLoading={isLoadingCategories}
             />
           </TabsContent>
         </Tabs>
