@@ -12,8 +12,9 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { ShoppingCart, User, LogOut, Settings, Package, History } from 'lucide-react';
+import { ShoppingCart, User, LogOut, Settings, Package, History, Heart } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
+import { useWishlist } from '@/hooks/useWishlist';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -22,11 +23,16 @@ interface LayoutProps {
 
 const Layout: React.FC<LayoutProps> = ({ children, cartItemCount = 0 }) => {
   const { user, userRole, signOut } = useAuth();
+  const { wishlistItems } = useWishlist();
   const navigate = useNavigate();
   const location = useLocation();
 
   const handleCartClick = () => {
     navigate('/cart');
+  };
+
+  const handleWishlistClick = () => {
+    navigate('/wishlist');
   };
 
   const handleOrderHistoryClick = () => {
@@ -93,20 +99,37 @@ const Layout: React.FC<LayoutProps> = ({ children, cartItemCount = 0 }) => {
               )}
 
               {userRole === 'consumer' && (
-                <Button
-                  variant="ghost"
-                  onClick={handleCartClick}
-                  className="relative text-rose-600 hover:text-rose-700 hover:bg-rose-50"
-                >
-                  <ShoppingCart className="h-5 w-5" />
-                  {cartItemCount > 0 && (
-                    <Badge 
-                      className="absolute -top-2 -right-2 h-5 w-5 flex items-center justify-center p-0 bg-gradient-to-r from-rose-500 to-purple-600 text-white text-xs"
-                    >
-                      {cartItemCount}
-                    </Badge>
-                  )}
-                </Button>
+                <div className="flex items-center space-x-2">
+                  <Button
+                    variant="ghost"
+                    onClick={handleWishlistClick}
+                    className="relative text-rose-600 hover:text-rose-700 hover:bg-rose-50"
+                  >
+                    <Heart className="h-5 w-5" />
+                    {wishlistItems.length > 0 && (
+                      <Badge 
+                        className="absolute -top-2 -right-2 h-5 w-5 flex items-center justify-center p-0 bg-gradient-to-r from-rose-500 to-purple-600 text-white text-xs"
+                      >
+                        {wishlistItems.length}
+                      </Badge>
+                    )}
+                  </Button>
+                  
+                  <Button
+                    variant="ghost"
+                    onClick={handleCartClick}
+                    className="relative text-rose-600 hover:text-rose-700 hover:bg-rose-50"
+                  >
+                    <ShoppingCart className="h-5 w-5" />
+                    {cartItemCount > 0 && (
+                      <Badge 
+                        className="absolute -top-2 -right-2 h-5 w-5 flex items-center justify-center p-0 bg-gradient-to-r from-rose-500 to-purple-600 text-white text-xs"
+                      >
+                        {cartItemCount}
+                      </Badge>
+                    )}
+                  </Button>
+                </div>
               )}
 
               {/* Profile Dropdown */}
@@ -139,6 +162,10 @@ const Layout: React.FC<LayoutProps> = ({ children, cartItemCount = 0 }) => {
                   
                   {userRole === 'consumer' && (
                     <>
+                      <DropdownMenuItem onClick={handleWishlistClick}>
+                        <Heart className="mr-2 h-4 w-4" />
+                        <span>My Wishlist</span>
+                      </DropdownMenuItem>
                       <DropdownMenuItem onClick={handleOrderHistoryClick}>
                         <History className="mr-2 h-4 w-4" />
                         <span>Order History</span>

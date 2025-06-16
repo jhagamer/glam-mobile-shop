@@ -8,6 +8,7 @@ import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import Home from "./pages/Home";
 import Auth from "./pages/Auth";
 import Cart from "./pages/Cart";
+import Wishlist from "./pages/Wishlist";
 import Admin from "./pages/Admin";
 import OrderHistory from "./pages/OrderHistory";
 import ProductManagement from "./pages/ProductManagement";
@@ -71,6 +72,11 @@ const AppRoutes = () => {
       <Route path="/cart" element={
         <ProtectedRoute>
           <Cart />
+        </ProtectedRoute>
+      } />
+      <Route path="/wishlist" element={
+        <ProtectedRoute>
+          <Wishlist />
         </ProtectedRoute>
       } />
       <Route path="/orders" element={
