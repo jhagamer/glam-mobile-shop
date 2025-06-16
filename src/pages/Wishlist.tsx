@@ -44,23 +44,34 @@ const WishlistPage: React.FC = () => {
     if (!user) return;
 
     try {
-      const { error } = await supabase
+      // First, check if the item already exists in the cart
+      const { data: existingItem, error: checkError } = await supabase
         .from('cart_items')
-        .insert([{ user_id: user.id, product_id: productId, quantity: 1 }]);
+        .select('id, quantity')
+        .eq('user_id', user.id)
+        .eq('product_id', productId)
+        .single();
 
-      if (error) {
-        if (error.code === '23505') {
-          // Item already in cart, update quantity
-          const { error: updateError } = await supabase
-            .from('cart_items')
-            .update({ quantity: supabase.sql`quantity + 1` })
-            .eq('user_id', user.id)
-            .eq('product_id', productId);
+      if (checkError && checkError.code !== 'PGRST116') {
+        // PGRST116 is "not found" error, which is expected if item doesn't exist
+        throw checkError;
+      }
 
-          if (updateError) throw updateError;
-        } else {
-          throw error;
-        }
+      if (existingItem) {
+        // Item exists, update quantity
+        const { error: updateError } = await supabase
+          .from('cart_items')
+          .update({ quantity: existingItem.quantity + 1 })
+          .eq('id', existingItem.id);
+
+        if (updateError) throw updateError;
+      } else {
+        // Item doesn't exist, insert new item
+        const { error: insertError } = await supabase
+          .from('cart_items')
+          .insert([{ user_id: user.id, product_id: productId, quantity: 1 }]);
+
+        if (insertError) throw insertError;
       }
 
       toast({
