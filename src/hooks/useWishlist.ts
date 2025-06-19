@@ -17,19 +17,26 @@ export const useWishlist = () => {
     
     try {
       setLoading(true);
+      console.log('Fetching wishlist for user:', user.email);
+      
       const { data, error } = await supabase
         .from('wishlist_items')
         .select('product_id')
         .eq('user_id', user.id);
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error fetching wishlist:', error);
+        throw error;
+      }
 
-      setWishlistItems(data?.map(item => item.product_id) || []);
-    } catch (error) {
+      const itemIds = data?.map(item => item.product_id) || [];
+      console.log('Wishlist fetched successfully:', itemIds.length, 'items');
+      setWishlistItems(itemIds);
+    } catch (error: any) {
       console.error('Error fetching wishlist:', error);
       toast({
         title: "Error",
-        description: "Failed to load wishlist.",
+        description: `Failed to load wishlist: ${error.message || 'Unknown error'}`,
         variant: "destructive"
       });
       setWishlistItems([]);

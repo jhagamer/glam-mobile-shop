@@ -48,6 +48,7 @@ export const useHomeData = () => {
       setCategoriesLoading(true);
       setCategoriesError(false);
       
+      console.log('Fetching categories...');
       const { data, error } = await supabase
         .from('categories')
         .select('*')
@@ -58,14 +59,14 @@ export const useHomeData = () => {
         throw error;
       }
       
-      console.log('Categories loaded:', data?.length || 0);
+      console.log('Categories loaded successfully:', data?.length || 0);
       setCategories(data || []);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error fetching categories:', error);
       setCategoriesError(true);
       toast({
-        title: "Error",
-        description: "Failed to load categories. Some features may not work properly.",
+        title: "Error Loading Categories",
+        description: `Failed to load categories: ${error.message || 'Unknown error'}`,
         variant: "destructive"
       });
     } finally {
@@ -76,6 +77,8 @@ export const useHomeData = () => {
   const fetchProducts = async (page = 1) => {
     try {
       setLoading(true);
+      console.log('Fetching products...');
+      
       let query = supabase
         .from('products')
         .select('*', { count: 'exact' })
@@ -136,17 +139,17 @@ export const useHomeData = () => {
         throw error;
       }
       
-      console.log('Products loaded:', data?.length || 0);
+      console.log('Products loaded successfully:', data?.length || 0);
       setProducts(data || []);
       setTotalCount(count || 0);
       setTotalPages(Math.ceil((count || 0) / ITEMS_PER_PAGE));
       setCurrentPage(page);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error fetching products:', error);
       setProducts([]);
       toast({
-        title: "Error",
-        description: "Failed to load products. Please try refreshing the page.",
+        title: "Error Loading Products",
+        description: `Failed to load products: ${error.message || 'Unknown error'}`,
         variant: "destructive"
       });
     } finally {
@@ -161,16 +164,21 @@ export const useHomeData = () => {
     }
 
     try {
+      console.log('Fetching cart count for user:', user.email);
       const { data, error } = await supabase
         .from('cart_items')
         .select('quantity')
         .eq('user_id', user.id);
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error fetching cart count:', error);
+        throw error;
+      }
 
       const totalCount = data?.reduce((sum, item) => sum + item.quantity, 0) || 0;
+      console.log('Cart count fetched successfully:', totalCount);
       setCartItemCount(totalCount);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error fetching cart count:', error);
       setCartItemCount(0);
     }

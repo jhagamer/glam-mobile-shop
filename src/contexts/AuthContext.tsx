@@ -32,6 +32,52 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [loading, setLoading] = useState(true);
   const [initialized, setInitialized] = useState(false);
 
+  const ensureUserProfile = async (userId: string, userEmail: string) => {
+    try {
+      // Check if profile exists
+      const { data: existingProfile } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('id', userId)
+        .single();
+
+      if (!existingProfile) {
+        console.log('Creating profile for new user:', userEmail);
+        const { error: profileError } = await supabase
+          .from('profiles')
+          .insert([{ id: userId, email: userEmail }]);
+
+        if (profileError) {
+          console.error('Error creating profile:', profileError);
+        }
+      }
+
+      // Check if user role exists
+      const { data: existingRole } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', userId)
+        .single();
+
+      if (!existingRole) {
+        console.log('Assigning consumer role to new user:', userEmail);
+        const { error: roleError } = await supabase
+          .from('user_roles')
+          .insert([{ user_id: userId, role: 'consumer' }]);
+
+        if (roleError) {
+          console.error('Error assigning role:', roleError);
+        }
+        return 'consumer';
+      }
+
+      return existingRole.role;
+    } catch (error) {
+      console.error('Error in ensureUserProfile:', error);
+      return 'consumer';
+    }
+  };
+
   const fetchUserRole = async (userId: string): Promise<'admin' | 'consumer'> => {
     try {
       console.log('Fetching user role for:', userId);
@@ -90,6 +136,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // Use setTimeout to defer the role fetching to prevent blocking
       setTimeout(async () => {
         try {
+          // Ensure user profile and role exist first
+          const userRole = await ensureUserProfile(session.user.id, session.user.email || '');
+          
           // For GitHub users, check if they have admin role, don't auto-assign
           if (session.user.app_metadata.provider === 'github') {
             console.log('=== GITHUB USER DETECTED ===');
@@ -118,10 +167,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               });
             }
           } else {
-            // For non-GitHub users (Google), fetch normal role
+            // For non-GitHub users (Google), use the role from ensureUserProfile
             console.log('=== NON-GITHUB USER ===');
-            const role = await fetchUserRole(session.user.id);
-            setUserRole(role);
+            setUserRole(userRole as 'admin' | 'consumer');
           }
         } catch (error) {
           console.error('Error in role fetching:', error);
