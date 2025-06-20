@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Product, Category, Order, User } from '@/types/admin';
@@ -168,25 +169,6 @@ export const useAdminData = (userRole: string) => {
     }
   };
 
-  const promoteToAdmin = async (userId: string) => {
-    try {
-      const { error } = await supabase
-        .from('user_roles')
-        .insert([{ user_id: userId, role: 'admin' }]);
-
-      if (error) throw error;
-      toast({ title: "Success", description: "User promoted to admin" });
-      fetchUsers();
-    } catch (error) {
-      console.error('Error promoting user:', error);
-      toast({
-        title: "Error",
-        description: "Failed to promote user",
-        variant: "destructive"
-      });
-    }
-  };
-
   useEffect(() => {
     if (userRole === 'admin') {
       fetchOrders();
@@ -206,7 +188,6 @@ export const useAdminData = (userRole: string) => {
     fetchOrders,
     fetchUsers,
     updateOrderStatus,
-    promoteToAdmin,
     createCategory
   };
 };

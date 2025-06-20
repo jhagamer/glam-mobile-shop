@@ -1,23 +1,21 @@
 
 import React from 'react';
-import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Crown } from 'lucide-react';
 import { User } from '@/types/admin';
 
 interface UsersTabProps {
   users: User[];
-  onPromoteToAdmin: (userId: string) => void;
 }
 
-export const UsersTab: React.FC<UsersTabProps> = ({
-  users,
-  onPromoteToAdmin
-}) => {
+export const UsersTab: React.FC<UsersTabProps> = ({ users }) => {
   return (
     <div className="space-y-6">
       <h2 className="text-2xl font-semibold">Users Management</h2>
+      <div className="text-sm text-gray-600 bg-blue-50 p-3 rounded-lg">
+        <strong>Note:</strong> Admin roles must be assigned manually through the database. 
+        Contact your database administrator to promote users to admin.
+      </div>
       <div className="space-y-4">
         {users.map((user) => (
           <Card key={user.id}>
@@ -33,16 +31,6 @@ export const UsersTab: React.FC<UsersTabProps> = ({
                   <Badge variant={user.roles.includes('admin') ? "default" : "secondary"}>
                     {user.roles.includes('admin') ? 'Admin' : 'Consumer'}
                   </Badge>
-                  {!user.roles.includes('admin') && (
-                    <Button
-                      size="sm"
-                      onClick={() => onPromoteToAdmin(user.id)}
-                      className="bg-gradient-to-r from-rose-500 to-purple-600"
-                    >
-                      <Crown className="h-4 w-4 mr-1" />
-                      Promote to Admin
-                    </Button>
-                  )}
                 </div>
               </div>
             </CardContent>

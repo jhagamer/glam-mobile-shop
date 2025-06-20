@@ -40,15 +40,11 @@ const Auth = () => {
             className="w-full h-12 border-2 border-gray-300 hover:border-gray-400 text-gray-700 font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105"
           >
             <Github className="mr-3 h-5 w-5" />
-            Admin Login with GitHub
+            Continue with GitHub
           </Button>
           
           <div className="text-center text-sm text-gray-500">
             By signing in, you agree to our Terms of Service and Privacy Policy
-          </div>
-          
-          <div className="text-center text-xs text-gray-400 bg-yellow-50 p-2 rounded-lg">
-            <strong>Note:</strong> GitHub login is restricted to admin users only. Only one admin can exist in the system.
           </div>
         </CardContent>
       </Card>

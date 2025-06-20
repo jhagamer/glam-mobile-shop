@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
@@ -55,54 +56,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const ensureGitHubAdminRole = async (userId: string): Promise<'admin' | 'consumer'> => {
-    try {
-      console.log('Ensuring GitHub admin role for user:', userId);
-      
-      // First check if user already has admin role
-      const { data: existingAdminRole } = await supabase
-        .from('user_roles')
-        .select('role')
-        .eq('user_id', userId)
-        .eq('role', 'admin')
-        .single();
-
-      if (!existingAdminRole) {
-        console.log('Adding admin role for GitHub user');
-        const { error: adminRoleError } = await supabase
-          .from('user_roles')
-          .insert([{ user_id: userId, role: 'admin' }]);
-
-        if (adminRoleError) {
-          console.error('Error adding admin role:', adminRoleError);
-          // If we can't add admin role, sign out the user
-          await supabase.auth.signOut();
-          throw new Error('Failed to assign admin role');
-        }
-      }
-
-      // Also ensure they have consumer role as backup
-      const { data: existingConsumerRole } = await supabase
-        .from('user_roles')
-        .select('role')
-        .eq('user_id', userId)
-        .eq('role', 'consumer')
-        .single();
-
-      if (!existingConsumerRole) {
-        console.log('Adding consumer role for GitHub user');
-        await supabase
-          .from('user_roles')
-          .insert([{ user_id: userId, role: 'consumer' }]);
-      }
-
-      return 'admin';
-    } catch (error) {
-      console.error('Error in ensureGitHubAdminRole:', error);
-      throw error;
-    }
-  };
-
   const fetchUserRole = async (userId: string): Promise<'admin' | 'consumer'> => {
     try {
       console.log('Fetching user role for:', userId);
@@ -146,7 +99,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     console.log('=== AUTH STATE CHANGE ===');
     console.log('Event:', event);
     console.log('Session user email:', session?.user?.email);
-    console.log('Provider:', session?.user?.app_metadata?.provider);
     
     // Prevent infinite loops by checking if we're already processing
     if (!initialized && event !== 'INITIAL_SESSION') {
@@ -164,36 +116,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           // Ensure user profile exists first
           await ensureUserProfile(session.user.id, session.user.email || '');
           
-          // For GitHub users, ensure they have admin role
-          if (session.user.app_metadata.provider === 'github') {
-            console.log('=== GITHUB USER DETECTED ===');
-            
-            try {
-              const role = await ensureGitHubAdminRole(session.user.id);
-              setUserRole(role);
-              console.log('GitHub admin user authorized with role:', role);
-              
-              if (event === 'SIGNED_IN') {
-                toast({
-                  title: "Welcome Admin",
-                  description: "You have been signed in with admin privileges.",
-                  variant: "default"
-                });
-              }
-            } catch (error) {
-              console.log('GitHub user failed admin role assignment, signing out');
-              toast({
-                title: "Access Denied",
-                description: "Admin role assignment failed. GitHub login is restricted to authorized administrators only.",
-                variant: "destructive"
-              });
-              return;
-            }
-          } else {
-            // For non-GitHub users (Google), check existing roles
-            console.log('=== NON-GITHUB USER ===');
-            const role = await fetchUserRole(session.user.id);
-            setUserRole(role);
+          // Fetch user role (no automatic admin assignment)
+          const role = await fetchUserRole(session.user.id);
+          setUserRole(role);
+          
+          if (event === 'SIGNED_IN') {
+            toast({
+              title: "Welcome",
+              description: `You have been signed in as ${role}.`,
+              variant: "default"
+            });
           }
         } catch (error) {
           console.error('Error in role fetching:', error);
@@ -221,7 +153,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     supabase.auth.getSession().then(({ data: { session } }) => {
       console.log('=== INITIAL SESSION CHECK ===');
       console.log('Initial session user:', session?.user?.email);
-      console.log('Initial session provider:', session?.user?.app_metadata?.provider);
       
       handleAuthStateChange('INITIAL_SESSION', session);
     });
