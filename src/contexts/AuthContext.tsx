@@ -55,7 +55,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const ensureGitHubAdminRole = async (userId: string) => {
+  const ensureGitHubAdminRole = async (userId: string): Promise<'admin' | 'consumer'> => {
     try {
       console.log('Ensuring GitHub admin role for user:', userId);
       
