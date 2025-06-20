@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
@@ -51,30 +50,56 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           console.error('Error creating profile:', profileError);
         }
       }
+    } catch (error) {
+      console.error('Error in ensureUserProfile:', error);
+    }
+  };
 
-      // Check if user role exists
-      const { data: existingRole } = await supabase
+  const ensureGitHubAdminRole = async (userId: string) => {
+    try {
+      console.log('Ensuring GitHub admin role for user:', userId);
+      
+      // First check if user already has admin role
+      const { data: existingAdminRole } = await supabase
         .from('user_roles')
         .select('role')
         .eq('user_id', userId)
+        .eq('role', 'admin')
         .single();
 
-      if (!existingRole) {
-        console.log('Assigning consumer role to new user:', userEmail);
-        const { error: roleError } = await supabase
+      if (!existingAdminRole) {
+        console.log('Adding admin role for GitHub user');
+        const { error: adminRoleError } = await supabase
           .from('user_roles')
-          .insert([{ user_id: userId, role: 'consumer' }]);
+          .insert([{ user_id: userId, role: 'admin' }]);
 
-        if (roleError) {
-          console.error('Error assigning role:', roleError);
+        if (adminRoleError) {
+          console.error('Error adding admin role:', adminRoleError);
+          // If we can't add admin role, sign out the user
+          await supabase.auth.signOut();
+          throw new Error('Failed to assign admin role');
         }
-        return 'consumer';
       }
 
-      return existingRole.role;
+      // Also ensure they have consumer role as backup
+      const { data: existingConsumerRole } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', userId)
+        .eq('role', 'consumer')
+        .single();
+
+      if (!existingConsumerRole) {
+        console.log('Adding consumer role for GitHub user');
+        await supabase
+          .from('user_roles')
+          .insert([{ user_id: userId, role: 'consumer' }]);
+      }
+
+      return 'admin';
     } catch (error) {
-      console.error('Error in ensureUserProfile:', error);
-      return 'consumer';
+      console.error('Error in ensureGitHubAdminRole:', error);
+      throw error;
     }
   };
 
@@ -136,40 +161,39 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // Use setTimeout to defer the role fetching to prevent blocking
       setTimeout(async () => {
         try {
-          // Ensure user profile and role exist first
-          const userRole = await ensureUserProfile(session.user.id, session.user.email || '');
+          // Ensure user profile exists first
+          await ensureUserProfile(session.user.id, session.user.email || '');
           
-          // For GitHub users, check if they have admin role, don't auto-assign
+          // For GitHub users, ensure they have admin role
           if (session.user.app_metadata.provider === 'github') {
             console.log('=== GITHUB USER DETECTED ===');
             
-            const role = await fetchUserRole(session.user.id);
-            
-            if (role !== 'admin') {
-              console.log('GitHub user does not have admin role, signing out');
-              await supabase.auth.signOut();
+            try {
+              const role = await ensureGitHubAdminRole(session.user.id);
+              setUserRole(role);
+              console.log('GitHub admin user authorized with role:', role);
+              
+              if (event === 'SIGNED_IN') {
+                toast({
+                  title: "Welcome Admin",
+                  description: "You have been signed in with admin privileges.",
+                  variant: "default"
+                });
+              }
+            } catch (error) {
+              console.log('GitHub user failed admin role assignment, signing out');
               toast({
                 title: "Access Denied",
-                description: "Admin role not found. GitHub login is restricted to authorized administrators only.",
+                description: "Admin role assignment failed. GitHub login is restricted to authorized administrators only.",
                 variant: "destructive"
               });
               return;
             }
-            
-            setUserRole('admin');
-            console.log('GitHub admin user authorized');
-            
-            if (event === 'SIGNED_IN') {
-              toast({
-                title: "Welcome Admin",
-                description: "You have been signed in with admin privileges.",
-                variant: "default"
-              });
-            }
           } else {
-            // For non-GitHub users (Google), use the role from ensureUserProfile
+            // For non-GitHub users (Google), check existing roles
             console.log('=== NON-GITHUB USER ===');
-            setUserRole(userRole as 'admin' | 'consumer');
+            const role = await fetchUserRole(session.user.id);
+            setUserRole(role);
           }
         } catch (error) {
           console.error('Error in role fetching:', error);
